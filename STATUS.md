@@ -57,6 +57,7 @@ This file is the working implementation map for the current prototype. It distin
 - Dedicated plant detail page with Today / Intelligence / Herbarium tabs
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
+- Reference Herbarium entries for Basil, Thyme, Mint, and Oregano
 
 ## Prototype / not yet connected to real systems
 
@@ -87,7 +88,6 @@ These elements look functional but currently use demo or placeholder behaviour:
 ## Known dead-end or placeholder links
 
 ### Public site
-- `Explore the Herbarium →` — placeholder
 - `Explore commercial →` — placeholder
 - Product `Get VyTile` / purchase path — no commerce yet
 
