@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Herbarium — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="herbarium.css">
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <a class="brand brand-image-link" href="index.html"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
+    <nav class="app-nav" aria-label="App">
+      <a href="app.html">Home</a>
+      <a href="plant.html">Plants</a>
+      <a class="active" href="herbarium.html">Herbarium</a>
+      <a href="app.html#settings">Settings</a>
+    </nav>
+    <button class="profile-button" type="button">DD</button>
+  </header>
+
+  <main class="herbarium-shell">
+    <section class="herbarium-intro">
+      <p class="eyebrow">Your digital collection</p>
+      <h1>Herbarium</h1>
+      <p class="lede">Collect plant dossiers, learn how different species behave, and build a record of what you grow and want to try next.</p>
+    </section>
+
+    <section class="collection-summary">
+      <article><strong>1</strong><span>Growing now</span></article>
+      <article><strong>0</strong><span>Completed collections</span></article>
+      <article><strong>3</strong><span>Want to grow</span></article>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Growing now</p><h2>Your collection</h2></div>
+      </div>
+      <div class="herbarium-grid">
+        <a class="dossier-card featured" href="herbarium-rosemary.html">
+          <div class="dossier-image"><img src="assets/hero/rosemary-vytile.png" alt="Rosemary"></div>
+          <div class="dossier-copy">
+            <span class="status good">Growing now</span>
+            <h3>Rosemary</h3>
+            <p><em>Salvia rosmarinus</em></p>
+            <div class="tag-row"><span>Herb</span><span>Culinary</span><span>Drought tolerant</span></div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Wishlist</p><h2>Want to grow</h2></div>
+      </div>
+      <div class="wish-grid">
+        <article><span>Saved</span><h3>Thyme</h3><p>Dry-loving Mediterranean herb.</p></article>
+        <article><span>Saved</span><h3>Peace lily</h3><p>Moisture-loving tropical contrast.</p></article>
+        <article><span>Saved</span><h3>Oregano</h3><p>Another step toward a Mediterranean kitchen.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-nav" aria-label="Mobile app navigation">
+    <a href="app.html"><span>⌂</span>Home</a>
+    <a href="plant.html"><span>♧</span>Plants</a>
+    <a class="active" href="herbarium.html"><span>▦</span>Herbarium</a>
+    <a href="app.html#settings"><span>⚙</span>Settings</a>
+  </nav>
+</body>
+</html>
