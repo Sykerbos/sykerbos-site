@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Set up VyTile — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="onboarding.css">
+</head>
+<body class="onboarding-body">
+  <main class="onboarding-shell">
+    <header class="onboarding-header">
+      <a class="brand" href="index.html"><span class="brand-mark">✦</span><span>SYKERBOS</span></a>
+      <span id="step-label">Step 1 of 6</span>
+    </header>
+    <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
+
+    <section class="setup-card">
+      <div class="slides" id="slides">
+        <article class="setup-slide active" data-step="0">
+          <p class="eyebrow">Welcome to Sykerbos</p><h1>Let’s set up your VyTile.</h1>
+          <p class="lede">We’ll connect it to Sykerbos and start learning how your plant uses water.</p>
+          <div class="setup-visual tile-visual"><div class="mini-pot"></div><div class="mini-tile"></div></div>
+        </article>
+
+        <article class="setup-slide" data-step="1">
+          <p class="eyebrow">Power</p><h1>Plug in your VyTile.</h1>
+          <p class="lede">Connect USB-C power. When the status light begins to pulse, your VyTile is ready to be found.</p>
+          <div class="setup-visual status-visual"><span class="pulse"></span><strong>Ready to connect</strong></div>
+        </article>
+
+        <article class="setup-slide" data-step="2">
+          <p class="eyebrow">Nearby device</p><h1>We found your VyTile.</h1>
+          <p class="lede">Keep your phone close while Sykerbos makes a secure local connection.</p>
+          <button class="device-card" type="button"><span>VyTile Mini</span><small>Device ending 7C9A · closest</small></button>
+        </article>
+
+        <article class="setup-slide" data-step="3">
+          <p class="eyebrow">Your account</p><h1>Save your plant journey.</h1>
+          <p class="lede">Create a Sykerbos account so your VyTile, plant history and learning stay with you.</p>
+          <div class="auth-options"><button type="button">Continue with Google</button><button type="button">Continue with Apple</button><button type="button">Continue with email</button></div>
+          <a class="text-link" href="#">Already have an account? Sign in</a>
+        </article>
+
+        <article class="setup-slide" data-step="4">
+          <p class="eyebrow">Wi-Fi</p><h1>Connect your VyTile to Wi-Fi.</h1>
+          <p class="lede">Choose the network you want this VyTile to use.</p>
+          <div class="network-list">
+            <button type="button"><span>Home Wi-Fi</span><small>Strong signal</small></button>
+            <button type="button"><span>Guest network</span><small>Good signal</small></button>
+            <button type="button"><span>Other network…</span><small>Enter manually</small></button>
+          </div>
+        </article>
+
+        <article class="setup-slide" data-step="5">
+          <p class="eyebrow">Your plant</p><h1>What are you growing?</h1>
+          <p class="lede">Find your plant so Sykerbos knows what to start looking for.</p>
+          <label class="search-box"><span>Search plants</span><input type="search" placeholder="Rosemary"></label>
+          <button class="plant-choice" type="button"><strong>Rosemary</strong><em>Salvia rosmarinus</em><small>Mediterranean · Drought tolerant</small></button>
+          <button class="plain-link" type="button">I’m not sure what this plant is</button>
+        </article>
+      </div>
+
+      <nav class="setup-nav" aria-label="Onboarding steps">
+        <button id="back" class="button button-secondary" type="button">← Back</button>
+        <div class="dots" id="dots" aria-hidden="true"></div>
+        <button id="next" class="button" type="button">Get started →</button>
+      </nav>
+    </section>
+  </main>
+  <script src="onboarding.js"></script>
+</body>
+</html>
