@@ -98,8 +98,6 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Visual placeholders to replace
 
-- Temporary star mark instead of approved Sykerbos geometric protea logo
-- CSS-drawn hero plant / pot / VyTile
 - Placeholder plant thumbnails
 - Placeholder product-range illustrations
 - Demo chart
@@ -122,10 +120,10 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Next build targets
 
-1. Replace temporary logo with approved Sykerbos branding.
-2. Define and build dedicated Plant detail page.
-3. Build dedicated Herbarium index + Rosemary dossier.
-4. Build Settings / Device page including Change Wi-Fi.
+1. Define and build dedicated Plant detail page.
+2. Build dedicated Herbarium index + Rosemary dossier.
+3. Build Settings / Device page including Change Wi-Fi.
+4. Replace remaining placeholder plant/product imagery as approved assets become available.
 5. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
 6. Create `vytile-firmware` repository with semantic firmware versions.
 7. Connect Supabase auth / device ownership / telemetry after UI paths are stable.
