@@ -33,3 +33,6 @@
   .device-summary{align-items:flex-start}
   .device-summary>img{width:76px;height:58px}
 }
+
+.plant-card-link{color:inherit;text-decoration:none;transition:transform .18s ease,box-shadow .18s ease}
+.plant-card-link:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(28,57,46,.07)}
