@@ -38,9 +38,9 @@ next.addEventListener('click',()=>{
   if(index===slides.length-1){
     syncPlantName();
     localStorage.setItem('sykerbosOnboardingComplete','true');
-    next.textContent='Setup complete ✓';
-    next.disabled=true;
-    next.style.opacity='.72';
+    next.textContent='Opening Sykerbos…';
+    localStorage.setItem('sykerbosOnboardingStep','0');
+    window.location.href='app.html';
     return;
   }
   go(1);
