@@ -12,7 +12,7 @@
   <main class="onboarding-shell">
     <header class="onboarding-header">
       <a class="brand" href="index.html"><span class="brand-mark">✦</span><span>SYKERBOS</span></a>
-      <span id="step-label">Step 1 of 6</span>
+      <span id="step-label">Step 1 of 10</span>
     </header>
     <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
 
@@ -33,7 +33,7 @@
         <article class="setup-slide" data-step="2">
           <p class="eyebrow">Nearby device</p><h1>We found your VyTile.</h1>
           <p class="lede">Keep your phone close while Sykerbos makes a secure local connection.</p>
-          <button class="device-card" type="button"><span>VyTile Mini</span><small>Device ending 7C9A · closest</small></button>
+          <button class="device-card selected" type="button"><span>VyTile Mini</span><small>Device ending 7C9A · closest</small></button>
         </article>
 
         <article class="setup-slide" data-step="3">
@@ -57,8 +57,43 @@
           <p class="eyebrow">Your plant</p><h1>What are you growing?</h1>
           <p class="lede">Find your plant so Sykerbos knows what to start looking for.</p>
           <label class="search-box"><span>Search plants</span><input type="search" placeholder="Rosemary"></label>
-          <button class="plant-choice" type="button"><strong>Rosemary</strong><em>Salvia rosmarinus</em><small>Mediterranean · Drought tolerant</small></button>
+          <button class="plant-choice selected" type="button"><strong>Rosemary</strong><em>Salvia rosmarinus</em><small>Mediterranean · Drought tolerant</small></button>
           <button class="plain-link" type="button">I’m not sure what this plant is</button>
+        </article>
+
+        <article class="setup-slide" data-step="6">
+          <p class="eyebrow">Make it yours</p><h1>What do you call this plant?</h1>
+          <p class="lede">Use anything that feels natural. You can change it later.</p>
+          <label class="search-box"><span>Plant name</span><input id="plant-name" type="text" value="Kitchen Rosemary" autocomplete="off"></label>
+          <div class="soft-note"><strong>Species</strong><span>Rosemary · <em>Salvia rosmarinus</em></span></div>
+        </article>
+
+        <article class="setup-slide" data-step="7">
+          <p class="eyebrow">Place your plant</p><h1>Set the complete pot on the VyTile.</h1>
+          <p class="lede">Centre the pot on the tile, then leave it still for a moment while the reading settles.</p>
+          <div class="setup-visual tile-visual"><div class="mini-pot plant-pot"></div><div class="mini-tile"></div><span class="placement-ring"></span></div>
+        </article>
+
+        <article class="setup-slide" data-step="8">
+          <p class="eyebrow">Live reading</p><h1>That looks stable.</h1>
+          <p class="lede">Sykerbos is receiving a steady reading from your VyTile.</p>
+          <div class="reading-card">
+            <span class="reading-status"><i></i> Stable</span>
+            <strong>1,284 g</strong>
+            <small>22.4 °C · VyTile Mini online</small>
+          </div>
+          <p class="helper-text">If you move the pot, wait a few seconds for the reading to settle again.</p>
+        </article>
+
+        <article class="setup-slide completion-slide" data-step="9">
+          <p class="eyebrow">Ready to grow</p><h1><span id="plant-name-display">Kitchen Rosemary</span> is connected.</h1>
+          <p class="lede">Sykerbos is now learning how this plant uses water. The next few irrigation and dry-down cycles will build its baseline.</p>
+          <div class="learning-card">
+            <div><span class="learning-icon">↘</span><strong>Learning dry-down</strong><small>0 cycles observed</small></div>
+            <div><span class="learning-icon">◌</span><strong>Watching irrigation</strong><small>Ready</small></div>
+            <div><span class="learning-icon">°</span><strong>Tracking temperature</strong><small>22.4 °C</small></div>
+          </div>
+          <p class="helper-text">No watering schedule yet — Sykerbos will learn from the plant first.</p>
         </article>
       </div>
 
