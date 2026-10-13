@@ -55,6 +55,8 @@ This file is the working implementation map for the current prototype. It distin
 - Want-to-grow buttons toggle locally
 - Device status teaser
 - Dedicated plant detail page with Today / Intelligence / Herbarium tabs
+- Herbarium index page
+- Rosemary Herbarium dossier based on locked 7-section template
 
 ## Prototype / not yet connected to real systems
 
@@ -121,12 +123,11 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Next build targets
 
-1. Build dedicated Herbarium index + Rosemary dossier.
-2. Build Settings / Device page including Change Wi-Fi.
-3. Replace remaining placeholder plant/product imagery as approved assets become available.
-4. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
-5. Create `vytile-firmware` repository with semantic firmware versions.
-6. Connect Supabase auth / device ownership / telemetry after UI paths are stable.
+1. Build Settings / Device page including Change Wi-Fi.
+2. Replace remaining placeholder plant/product imagery as approved assets become available.
+3. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
+4. Create `vytile-firmware` repository with semantic firmware versions.
+5. Connect Supabase auth / device ownership / telemetry after UI paths are stable.
 
 ## Architecture direction
 
