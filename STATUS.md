@@ -127,6 +127,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 - Plant achievements are based on observed behaviour, not arbitrary clicks.
 - Users may mark plants as `Want to grow`.
 - Future recommendations can use habitat and observed growing style.
+- Roadmap easter egg / retention concept: “Herbarium Battles” — a future plant card game using biologically grounded traits such as resilience, growth, perks, weather and habitat cards.
 
 ## Next build targets
 
