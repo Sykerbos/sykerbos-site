@@ -104,12 +104,18 @@ async function init(){
   ]);
   const latest=latestRows?.[0]||null, summary=summaryRows?.[0]||null;
   const fresh=stampOf(latest)&&(Date.now()-new Date(stampOf(latest)).getTime()<90*60000);
-  $('#plant-status').textContent=fresh?'Connected':'Last seen '+ageLabel(stampOf(latest));
-  $('#plant-status').className='status '+(fresh?'good':'learning');
+  const maintenance=p.status==='offline'||device.status==='maintenance';
+  $('#plant-status').textContent=maintenance?'Maintenance':fresh?'Connected':'Last seen '+ageLabel(stampOf(latest));
+  $('#plant-status').className='status '+(maintenance?'offline':fresh?'good':'learning');
+  if(maintenance){
+    $('#plant-summary').textContent=`${plantName(p)} is currently offline while ${device.device_code} is awaiting an electronics rebuild. Historical readings remain available below.`;
+  }
   $('#plant-weight').textContent=latest?fmt(latest.weight_g)+' g':'—';
   $('#plant-temperature').textContent=latest?fmt(latest.temperature_c)+' °C':'—';
   $('#plant-reading-count').textContent=Number(summary?.reading_count||0).toLocaleString();
-  $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
+  if(!maintenance){
+    $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
+  }
 
   const low=Number(summary?.p05_weight_g), high=Number(summary?.p95_weight_g), current=Number(latest?.weight_g);
   if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
