@@ -62,3 +62,9 @@
 .section-actions{display:flex;gap:18px;flex-wrap:wrap}
 @media(max-width:900px){.live-primary-card{grid-template-columns:140px 1fr}.live-primary-card .attention-reading{grid-column:1/-1}.primary-herbarium-image{width:140px;height:140px}.plant-grid-live{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.live-primary-card{grid-template-columns:1fr}.primary-herbarium-image{width:100%;height:230px}.plant-grid-live{grid-template-columns:1fr}.plant-collection-card .plant-thumb{height:220px}}
+
+/* Dashboard lower-section cleanup */
+.discovery-block{padding-top:38px}
+.settings-tease{margin-top:36px;padding:20px 24px;background:white;border:1px solid var(--line);border-radius:22px}
+.settings-tease.section-block{padding-top:20px}
+@media(max-width:760px){.settings-tease{margin-top:28px}}
