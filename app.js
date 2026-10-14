@@ -36,16 +36,16 @@ function formatAge(dateString){
   return `${Math.round(hours/24)} d ago`;
 }
 
-function findReadingNear(readings,hoursAgo){
-  if(!readings?.length) return null;
-  const target=Date.now()-hoursAgo*3600000;
+function findReadingNear(readings,hoursAgo,anchorReading,toleranceMinutes=75){
+  if(!readings?.length||!anchorReading) return null;
+  const target=readingTime(anchorReading)-hoursAgo*3600000;
   let best=null;
   let bestDiff=Infinity;
   for(const r of readings){
     const diff=Math.abs(readingTime(r)-target);
     if(diff<bestDiff){best=r;bestDiff=diff;}
   }
-  return best;
+  return bestDiff<=toleranceMinutes*60000?best:null;
 }
 
 function changeBetween(oldReading,newReading){
@@ -217,18 +217,24 @@ async function loadPlantData(user){
   $('#chart-note').textContent=`${history.length.toLocaleString()} live readings shown from the last 7 days · ${primary.device.device_code}`;
 
   const newest=history[history.length-1];
-  const six=findReadingNear(history,6);
-  const day=findReadingNear(history,24);
+  const six=findReadingNear(history,6,newest);
+  const twelve=findReadingNear(history,12,newest);
   const sixChange=changeBetween(six,newest);
-  const dayChange=changeBetween(day,newest);
+  const twelveChange=changeBetween(twelve,newest);
 
   if(sixChange!==null){
     $('#six-hour-rate').textContent=(sixChange>0?'+':'')+sixChange.toFixed(1)+' g';
-    $('#six-hour-note').textContent=sixChange<0?'Net loss over ~6 h':sixChange>0?'Net gain over ~6 h':'Stable over ~6 h';
+    $('#six-hour-note').textContent=sixChange<0?'Net loss over 6 h':sixChange>0?'Net gain over 6 h':'Stable over 6 h';
+  }else{
+    $('#six-hour-rate').textContent='—';
+    $('#six-hour-note').textContent='Not enough continuous data';
   }
-  if(dayChange!==null){
-    $('#day-change').textContent=(dayChange>0?'+':'')+dayChange.toFixed(1)+' g';
-    $('#day-change-note').textContent=dayChange<0?'Net loss over ~24 h':dayChange>0?'Net gain over ~24 h':'Stable over ~24 h';
+  if(twelveChange!==null){
+    $('#twelve-hour-change').textContent=(twelveChange>0?'+':'')+twelveChange.toFixed(1)+' g';
+    $('#twelve-hour-note').textContent=twelveChange<0?'Net loss over 12 h':twelveChange>0?'Net gain over 12 h':'Stable over 12 h';
+  }else{
+    $('#twelve-hour-change').textContent='—';
+    $('#twelve-hour-note').textContent='Not enough continuous data';
   }
 
   const direction= sixChange===null ? 'building a baseline' :
