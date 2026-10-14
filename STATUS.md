@@ -55,6 +55,7 @@ This file is the working implementation map for the current prototype. It distin
 - Plant recommendation cards
 - Want-to-grow buttons toggle locally
 - Device status teaser
+- Secure one-time Alpha claim flow via Supabase Edge Function
 - Email/password account creation and sign-in
 - Guest/anonymous sign-in UI (requires Supabase Anonymous Sign-Ins toggle)
 - Supabase user/device ownership schema with RLS
