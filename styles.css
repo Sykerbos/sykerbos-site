@@ -77,3 +77,31 @@ footer{margin-top:16px}
   .site-header.open .header-actions{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
   .site-header.open .header-actions .button{grid-column:1/-1;justify-self:start}
 }
+
+/* Hero asset population — 2026-10-14 */
+.product-photo{height:190px;border-radius:18px;overflow:hidden;background:#e9eadf;margin-bottom:18px}
+.product-photo img{width:100%;height:100%;display:block;object-fit:cover}
+.product-card:first-child .product-photo img{object-position:center 62%}
+.product-card:nth-child(2) .product-photo img{object-position:center}
+.product-card:nth-child(3) .product-photo img{object-position:center}
+.product-card:nth-child(4) .product-photo img{object-position:center}
+.product-card h3{margin-top:0}
+
+.commercial-visual-panel{position:relative;padding:0;min-height:380px;background:#dfe7dc}
+.commercial-visual-panel>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}
+.commercial-visual-panel:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(12,41,33,.88) 0%,rgba(12,41,33,.72) 45%,rgba(12,41,33,.16) 100%)}
+.commercial-visual-panel .feature-overlay{position:relative;z-index:2;max-width:72%;padding:42px;color:white}
+.commercial-visual-panel h2,.commercial-visual-panel .eyebrow{color:white}
+.commercial-visual-panel p{color:rgba(255,255,255,.88)}
+.concept-tag{display:inline-flex;margin-top:10px;padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);font-size:.75rem;font-weight:700}
+
+@media(max-width:960px){
+  .product-photo{height:220px}
+}
+@media(max-width:640px){
+  .product-photo{height:210px}
+  .commercial-visual-panel{min-height:430px}
+  .commercial-visual-panel .feature-overlay{max-width:100%;padding:30px}
+  .commercial-visual-panel:after{background:linear-gradient(180deg,rgba(12,41,33,.18) 0%,rgba(12,41,33,.76) 52%,rgba(12,41,33,.94) 100%)}
+  .commercial-visual-panel>img{object-position:58% center}
+}
