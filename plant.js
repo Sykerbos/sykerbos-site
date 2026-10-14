@@ -31,6 +31,25 @@ function setAsset(el,asset){
   if(asset){el.style.backgroundImage=`url("${asset.image}")`;el.classList.add('has-image');}
   else{el.style.backgroundImage='none';el.classList.remove('has-image');}
 }
+function readingNear(readings,hoursAgo,anchor,toleranceMinutes=75){
+  if(!readings?.length||!anchor) return null;
+  const target=timeOf(anchor)-hoursAgo*3600000;
+  let best=null,bestDiff=Infinity;
+  for(const r of readings){
+    const diff=Math.abs(timeOf(r)-target);
+    if(diff<bestDiff){best=r;bestDiff=diff;}
+  }
+  return bestDiff<=toleranceMinutes*60000?best:null;
+}
+function delta(oldReading,newReading){
+  const a=Number(oldReading?.weight_g),b=Number(newReading?.weight_g);
+  return Number.isFinite(a)&&Number.isFinite(b)?b-a:null;
+}
+function showDelta(selector,n){
+  const el=$(selector);
+  if(!el) return;
+  el.textContent=n===null?'—':(n>0?'+':'')+n.toFixed(1)+' g';
+}
 
 function drawChart(readings){
   const host=$('#plant-chart');
@@ -56,17 +75,37 @@ function recentEvents(readings){
 }
 
 async function loadRange(deviceId,hours){
-  const since=new Date(Date.now()-hours*3600000).toISOString();
+  const {data:latestRows,error:latestError}=await supabase.from('readings')
+    .select('weight_g,temperature_c,measured_at,created_at')
+    .eq('device_id',deviceId)
+    .order('measured_at',{ascending:false,nullsFirst:false})
+    .order('created_at',{ascending:false})
+    .limit(1);
+  if(latestError) throw latestError;
+  const anchor=latestRows?.[0];
+  if(!anchor){
+    drawChart([]);
+    return;
+  }
+  const since=new Date(timeOf(anchor)-hours*3600000).toISOString();
   const {data,error}=await supabase.from('readings')
     .select('weight_g,temperature_c,measured_at,created_at')
     .eq('device_id',deviceId)
     .gte('created_at',since)
+    .lte('created_at',new Date(timeOf(anchor)+60000).toISOString())
     .order('created_at',{ascending:true})
     .limit(5000);
   if(error) throw error;
-  drawChart(data||[]);
-  recentEvents(data||[]);
-  $('#plant-chart-note').textContent=`${(data||[]).length.toLocaleString()} readings in this range`;
+  const readings=data||[];
+  drawChart(readings);
+  recentEvents(readings);
+  $('#plant-chart-note').textContent=`${readings.length.toLocaleString()} readings · range ends at latest VyTile reading`;
+
+  const newest=readings.at(-1)||anchor;
+  const six=readingNear(readings,6,newest);
+  const twelve=readingNear(readings,12,newest);
+  showDelta('#plant-6h-change',delta(six,newest));
+  showDelta('#plant-12h-change',delta(twelve,newest));
 }
 
 async function init(){
