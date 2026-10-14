@@ -46,7 +46,8 @@ This file is the working implementation map for the current prototype. It distin
 - Plant name is carried over from onboarding
 - Responsive desktop and mobile navigation
 - Summary / current plant card
-- Demo plant metrics
+- Demo dry-down / irrigation-derived metrics
+- Live latest weight and temperature for claimed devices
 - Demo weight-trend visual
 - Sykerbos learning state
 - Your Plants section
@@ -54,6 +55,10 @@ This file is the working implementation map for the current prototype. It distin
 - Plant recommendation cards
 - Want-to-grow buttons toggle locally
 - Device status teaser
+- Email/password account creation and sign-in
+- Guest/anonymous sign-in UI (requires Supabase Anonymous Sign-Ins toggle)
+- Supabase user/device ownership schema with RLS
+- Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page with Today / Intelligence / Herbarium tabs
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
@@ -65,13 +70,9 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 - Bluetooth discovery
 - Device identity / QR claiming
-- Account creation and sign-in
 - Google / Apple sign-in
 - Wi-Fi network scanning
 - Wi-Fi password entry and secure provisioning
-- Supabase Auth
-- Device ownership
-- Live VyTile telemetry
 - Real temperature / weight / dry-down calculations
 - Irrigation-event recognition
 - Prediction engine
@@ -127,7 +128,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 2. Replace remaining placeholder plant/product imagery as approved assets become available.
 3. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
 4. Create `vytile-firmware` repository with semantic firmware versions.
-5. Connect Supabase auth / device ownership / telemetry after UI paths are stable.
+5. Claim current Alpha devices to the first real user account, then connect command queue and richer telemetry history.
 
 ## Architecture direction
 
