@@ -129,6 +129,8 @@ These elements look functional but currently use demo or placeholder behaviour:
 - Future recommendations can use habitat and observed growing style.
 - Roadmap easter egg / retention concept: “Herbarium Battles” — a future plant card game using biologically grounded traits such as resilience, growth, perks, weather and habitat cards.
 
+- Alpha01 is manually marked as maintenance/offline and is sorted below active plants while retaining historical data.
+
 ## Next build targets
 
 1. Refine Home layout and plant analytics using real telemetry; add irrigation event recognition next.
