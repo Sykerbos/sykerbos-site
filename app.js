@@ -54,6 +54,24 @@ function changeBetween(oldReading,newReading){
   return b-a;
 }
 
+function slopePerDay(readings){
+  const pts=(readings||[])
+    .filter(r=>Number.isFinite(Number(r.weight_g))&&stampOf(r))
+    .map(r=>({x:readingTime(r)/1000,y:Number(r.weight_g)}));
+  if(pts.length<3) return null;
+  const mx=pts.reduce((s,p)=>s+p.x,0)/pts.length;
+  const my=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const num=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
+  const den=pts.reduce((s,p)=>s+(p.x-mx)*(p.x-mx),0);
+  return den?num/den*86400:null;
+}
+
+function windowReadings(readings,hours,anchor){
+  if(!anchor) return [];
+  const cutoff=readingTime(anchor)-hours*3600000;
+  return (readings||[]).filter(r=>readingTime(r)>=cutoff&&readingTime(r)<=readingTime(anchor));
+}
+
 function buildChart(readings){
   const host=$('#real-chart');
   if(!host) return;
@@ -227,17 +245,19 @@ async function loadPlantData(user){
   const twelve=findReadingNear(history,12,newest);
   const sixChange=changeBetween(six,newest);
   const twelveChange=changeBetween(twelve,newest);
+  const sixSlope=slopePerDay(windowReadings(history,6,newest));
+  const twelveSlope=slopePerDay(windowReadings(history,12,newest));
 
-  if(sixChange!==null){
-    $('#six-hour-rate').textContent=(sixChange>0?'+':'')+sixChange.toFixed(1)+' g';
-    $('#six-hour-note').textContent=sixChange<0?'Net loss over 6 h':sixChange>0?'Net gain over 6 h':'Stable over 6 h';
+  if(sixSlope!==null&&sixChange!==null){
+    $('#six-hour-rate').textContent=(sixSlope<0?Math.abs(sixSlope).toFixed(1):'+'+sixSlope.toFixed(1))+' g/day';
+    $('#six-hour-note').textContent=(sixSlope<0?'Net '+sixChange.toFixed(1)+' g over 6 h':'Mass rising · net +'+sixChange.toFixed(1)+' g');
   }else{
     $('#six-hour-rate').textContent='—';
     $('#six-hour-note').textContent='Not enough continuous data';
   }
-  if(twelveChange!==null){
-    $('#twelve-hour-change').textContent=(twelveChange>0?'+':'')+twelveChange.toFixed(1)+' g';
-    $('#twelve-hour-note').textContent=twelveChange<0?'Net loss over 12 h':twelveChange>0?'Net gain over 12 h':'Stable over 12 h';
+  if(twelveSlope!==null&&twelveChange!==null){
+    $('#twelve-hour-change').textContent=(twelveSlope<0?Math.abs(twelveSlope).toFixed(1):'+'+twelveSlope.toFixed(1))+' g/day';
+    $('#twelve-hour-note').textContent=(twelveSlope<0?'Net '+twelveChange.toFixed(1)+' g over 12 h':'Mass rising · net +'+twelveChange.toFixed(1)+' g');
   }else{
     $('#twelve-hour-change').textContent='—';
     $('#twelve-hour-note').textContent='Not enough continuous data';
