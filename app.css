@@ -39,3 +39,9 @@
 
 .profile-button{cursor:pointer}
 .auth-state-note{font-size:.84rem;color:var(--muted)}
+
+.claim-panel{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:end;background:white;border:1px solid var(--line);border-radius:24px;padding:24px}
+.claim-panel h2{margin-bottom:8px}.claim-panel p{margin-bottom:0;color:var(--muted)}
+.claim-actions{display:flex;gap:10px;align-items:center}.claim-actions input{min-width:260px;padding:13px 14px;border:1px solid var(--line);border-radius:14px;font:inherit}
+.claim-message{grid-column:1/-1;min-height:22px;font-size:.9rem}.claim-message.error{color:#9a3f31}.claim-message.success{color:#2d6e43}
+@media(max-width:760px){.claim-panel{grid-template-columns:1fr}.claim-actions{flex-direction:column;align-items:stretch}.claim-actions input{min-width:0;width:100%}}
