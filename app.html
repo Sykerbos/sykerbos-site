@@ -17,7 +17,7 @@
       <a href="herbarium.html">Herbarium</a>
       <a href="#settings">Settings</a>
     </nav>
-    <button class="profile-button" type="button" aria-label="Profile">DD</button>
+    <button class="profile-button" id="profile-button" type="button" aria-label="Account">··</button>
   </header>
 
   <main class="app-shell">
@@ -37,13 +37,13 @@
         <p>Drying steadily after the last irrigation. Sykerbos is still learning this plant’s normal rhythm.</p>
       </div>
       <div class="attention-reading">
-        <strong>1,284 g</strong>
-        <span>Current weight</span>
+        <strong id="live-weight">—</strong>
+        <span id="live-reading-label">Current weight</span>
       </div>
     </section>
 
     <section class="metric-strip" aria-label="Plant summary">
-      <article><small>Temperature</small><strong>22.4 °C</strong><span>Comfortable</span></article>
+      <article><small>Temperature</small><strong id="live-temp">—</strong><span id="temp-status">Waiting for device</span></article>
       <article><small>Dry-down</small><strong>3.2 g/day</strong><span>Steady</span></article>
       <article><small>Last irrigation</small><strong>2 days ago</strong><span>Learning pattern</span></article>
       <article><small>Observed cycles</small><strong>0</strong><span>Baseline building</span></article>
@@ -82,7 +82,7 @@
         <a class="plant-home-card plant-card-link" href="plant.html">
           <div class="plant-thumb rosemary-thumb"><img src="assets/hero/rosemary-vytile.png" alt="Kitchen Rosemary on VyTile"></div>
           <div><span class="status good">Connected</span><h3 id="plant-card-name">Kitchen Rosemary</h3><p>Rosemary · <em>Salvia rosmarinus</em></p></div>
-          <div class="plant-card-meta"><strong>1,284 g</strong><small>22.4 °C</small></div>
+          <div class="plant-card-meta"><strong id="card-weight">—</strong><small id="card-temp">—</small></div>
         </a>
         <article class="plant-home-card add-card">
           <div class="add-circle">+</div>
@@ -106,7 +106,7 @@
     <section id="settings" class="section-block settings-tease">
       <div class="device-summary">
         <img src="assets/brand/vytile-logo-transparent-exact.png" alt="VyTile">
-        <div><p class="eyebrow">Device</p><h2>VyTile Mini · Online</h2><p>Wi-Fi connected · Firmware prototype</p></div>
+        <div><p class="eyebrow">Device</p><h2 id="device-heading">No VyTile claimed yet</h2><p id="device-meta">Sign in and claim an Alpha device to see live data here.</p></div>
       </div>
       <button class="button button-secondary" type="button">Device settings</button>
     </section>
@@ -119,6 +119,6 @@
     <a href="#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
