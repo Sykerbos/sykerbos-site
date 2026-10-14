@@ -44,12 +44,13 @@ This file is the working implementation map for the current prototype. It distin
 ### App prototype
 - `app.html`
 - Home is the default dashboard
-- Plant name is carried over from onboarding
+- Plant identity is loaded from the authenticated user's Supabase plant records
 - Responsive desktop and mobile navigation
 - Summary / current plant card
-- Demo dry-down / irrigation-derived metrics
+- Live 6-hour and 24-hour net weight change from Supabase readings
 - Live latest weight and temperature for claimed devices
-- Demo weight-trend visual
+- Home dashboard reads real plant records, primary-plant selection, reading counts, and seven-day weight history
+- Live seven-day weight-trend visual
 - Sykerbos learning state
 - Your Plants section
 - Add another VyTile links back to onboarding
@@ -77,7 +78,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 - Google / Apple sign-in
 - Wi-Fi network scanning
 - Wi-Fi password entry and secure provisioning
-- Real temperature / weight / dry-down calculations
+- Irrigation-normalized dry-down calculations
 - Irrigation-event recognition
 - Prediction engine
 - Herbarium database
@@ -106,7 +107,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Visual placeholders to replace
 
-- Placeholder plant thumbnails
+- Generic fallback thumbnails for plants without a Herbarium image
 - Placeholder product-range illustrations
 - Demo chart
 - Temporary icons / symbols
