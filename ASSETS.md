@@ -4,13 +4,13 @@ This register tracks plant imagery used by the public site, app dashboard, and H
 
 | Plant | Botanical name | Current asset | Source / licence | Status |
 | --- | --- | --- | --- | --- |
-| Rosemary | *Salvia rosmarinus* | `assets/hero/rosemary-vytile.png` | Sykerbos project photo | In use |
-| Basil | *Ocimum basilicum* | Wikimedia botanical illustration | Public domain | In use |
-| Thyme | *Thymus vulgaris* | Wikimedia Köhler botanical illustration | Public domain | In use |
-| Mint / Peppermint | *Mentha × piperita* | Wikimedia 1903 botanical illustration | Public domain | In use |
-| Oregano | *Origanum vulgare* | Wikimedia historical botanical illustration | Public domain | In use |
-| Valencia orange | *Citrus × sinensis* | USDA pomological watercolor via Wikimedia | Public domain | In use for Alpha dashboard |
-| Peace lily | *Spathiphyllum* spp. | None yet | — | Needed |
+| Rosemary | *Salvia rosmarinus* | `assets/plants/rosemary.png` | Sykerbos generated asset | In use |
+| Basil | *Ocimum basilicum* | `assets/plants/basil.png` | Sykerbos generated asset | In use |
+| Thyme | *Thymus vulgaris* | `assets/plants/thyme.png` | Sykerbos generated asset | In use |
+| Mint / Peppermint | *Mentha × piperita* | `assets/plants/mint.png` | Sykerbos generated asset | In use |
+| Oregano | *Origanum vulgare* | `assets/plants/oregano.png` | Sykerbos generated asset | In use |
+| Valencia orange | *Citrus × sinensis* | `assets/plants/valencia-orange-seedling.png` | Sykerbos generated asset | In use |
+| Peace lily | *Spathiphyllum* spp. | `assets/plants/peace-lily.png` | Sykerbos generated asset | In use |
 
 Runtime mapping lives in `plant-assets.js`.
 
@@ -35,7 +35,7 @@ Locked visual language:
 - no pots, props, scenery, labels, or text baked into the image
 - full portrait can serve Herbarium; tighter crops can serve dashboard cards
 
-The generated binary image files are awaiting import into version-controlled local assets. Once imported, runtime mapping should use local paths only.
+Approved first-set binaries are now stored under `assets/plants/` and the runtime mapping uses local paths only.
 
 ## Asset rules
 
