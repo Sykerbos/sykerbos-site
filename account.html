@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Account — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="account.css">
+</head>
+<body class="account-body">
+  <main class="account-shell">
+    <a class="brand brand-image-link account-brand" href="index.html"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
+
+    <section class="account-card">
+      <div class="account-copy">
+        <p class="eyebrow">Your Sykerbos account</p>
+        <h1>Keep your plants, data and VyTiles together.</h1>
+        <p>Create an account for your own VyTiles, or explore the app as a guest before connecting hardware.</p>
+      </div>
+
+      <div class="account-tabs" role="tablist">
+        <button class="active" data-mode="signin" type="button">Sign in</button>
+        <button data-mode="signup" type="button">Create account</button>
+      </div>
+
+      <form id="account-form">
+        <label>Email<input id="email" type="email" autocomplete="email" required placeholder="you@example.com"></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters"></label>
+        <button id="submit-account" class="button" type="submit">Sign in</button>
+      </form>
+
+      <div class="account-divider"><span>or</span></div>
+      <button id="guest-button" class="button button-secondary guest-button" type="button">Explore as guest</button>
+      <p class="guest-note">Guest mode is designed for browsing the app and Herbarium before claiming a VyTile.</p>
+      <p id="account-message" class="account-message" aria-live="polite"></p>
+    </section>
+  </main>
+  <script type="module" src="account.js"></script>
+</body>
+</html>
