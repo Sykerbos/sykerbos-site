@@ -60,6 +60,7 @@ This file is the working implementation map for the current prototype. It distin
 - Guest/anonymous sign-in UI (requires Supabase Anonymous Sign-Ins toggle)
 - Supabase user/device ownership schema with RLS
 - Plants backend model with plant ↔ device assignment, primary plant, display order, and RLS
+- Plant assignment screen for claimed VyTiles, including main-plant selection
 - Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page with Today / Intelligence / Herbarium tabs
 - Herbarium index page
@@ -126,7 +127,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Next build targets
 
-1. Bind claimed VyTiles to real plant records, then redesign Home around a primary plant plus the rest of the user's plants.
+1. Redesign Home around the saved primary plant plus the rest of the user's plants.
 2. Replace remaining placeholder plant/product imagery as approved assets become available.
 3. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
 4. Create `vytile-firmware` repository with semantic firmware versions.
