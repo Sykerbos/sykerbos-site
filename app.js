@@ -15,8 +15,8 @@ const imageFor=p=>plantAssetFor(p);
 function setImage(el,plant){
   const image=imageFor(plant);
   if(image){
-    el.style.backgroundImage=`url("${image.url}")`;
-    el.style.backgroundPosition=image.position||'center';
+    el.style.backgroundImage=`url("${image.image}")`;
+    el.style.backgroundPosition='center';
     el.classList.add('has-image');
   }else{
     el.style.backgroundImage='none';
@@ -100,7 +100,7 @@ function renderPlantCards(plants){
     const age=formatAge(stampOf(r));
     const fresh=stampOf(r) && (Date.now()-new Date(stampOf(r)).getTime()<90*60000);
     const image=imageFor(p);
-    const bg=image?`style="background-image:url('${image.url}');background-position:${image.position||'center'}"`:'';
+    const bg=image?`style="background-image:url('${image.image}');background-position:${'center'}"`:'';
     const cls=image?'plant-thumb herbarium-thumb has-image':'plant-thumb herbarium-thumb';
     const fallback=!image?(p.common_name||p.nickname||'P').slice(0,1).toUpperCase():'';
     return `<a class="plant-collection-card" href="plant.html?plant=${encodeURIComponent(p.id)}" data-plant-id="${p.id}">
