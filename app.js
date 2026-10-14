@@ -120,7 +120,7 @@ function renderPlantCards(plants){
         <h3>${plantLabel(p)}</h3>
         <p>${speciesLabel(p)||p.device?.device_code||'Plant'}</p>
         <div class="mini-reading"><strong>${fmt(r?.weight_g)} g</strong><span>${fmt(r?.temperature_c)} °C</span></div>
-        <small>${p.device?.device_code||''} · ${maintenance?'Electronics rebuild pending':Number(p.reading_count||0).toLocaleString()+' readings'}</small>
+        <small>${p.device?.device_code||''} · ${maintenance?'Electronics rebuild pending':Number(p.reading_count||0).toLocaleString()+' current-run readings'}</small>
       </div>
     </a>`;
   });
@@ -160,7 +160,7 @@ async function loadPlantData(user){
     if(device){
       const [{data:latestRows},{count}]=await Promise.all([
         supabase.from('readings')
-          .select('weight_g,temperature_c,measured_at,created_at')
+          .select('weight_g,temperature_c,measured_at,created_at,run_id')
           .eq('device_id',device.id)
           .order('measured_at',{ascending:false,nullsFirst:false})
           .order('created_at',{ascending:false})
@@ -192,21 +192,25 @@ async function loadPlantData(user){
   $('#temp-status').textContent=latest?'Latest VyTile reading':'Waiting for weight data';
   $('#live-reading-label').textContent=latestStamp?'Updated '+formatAge(latestStamp):'No reading yet';
   $('#reading-count').textContent=Number(primary.reading_count||0).toLocaleString();
-  $('#reading-count-note').textContent=primary.device?.device_code||'This plant';
+  $('#reading-count-note').textContent=primary.latest?.run_id||primary.device?.device_code||'This plant';
 
   $('#device-heading').textContent=primary.device?`${primary.device.device_code} · ${isFresh?'Online':'Not currently reporting'}`:'No VyTile assigned';
   $('#device-meta').textContent=primary.device?`${primary.device.model} · ${plantLabel(primary)}`:'Use Plant + device setup';
 
   if(!primary.device) return;
 
-  const since=new Date(Date.now()-7*86400000).toISOString();
-  const {data:history,error:historyError}=await supabase
+  const anchorTime=readingTime(primary.latest);
+  const since=new Date(anchorTime-7*86400000).toISOString();
+  let historyQuery=supabase
     .from('readings')
-    .select('weight_g,temperature_c,measured_at,created_at')
+    .select('weight_g,temperature_c,measured_at,created_at,run_id')
     .eq('device_id',primary.device.id)
-    .gte('created_at',since)
-    .order('created_at',{ascending:true})
+    .gte('measured_at',since)
+    .lte('measured_at',new Date(anchorTime+60000).toISOString())
+    .order('measured_at',{ascending:true})
     .limit(1000);
+  if(primary.latest?.run_id) historyQuery=historyQuery.eq('run_id',primary.latest.run_id);
+  const {data:history,error:historyError}=await historyQuery;
 
   if(historyError || !history?.length){
     $('#primary-summary').textContent='Sykerbos has this plant connected, but there is not enough recent history to summarize yet.';
@@ -214,7 +218,9 @@ async function loadPlantData(user){
   }
 
   buildChart(history);
-  $('#chart-note').textContent=`${history.length.toLocaleString()} live readings shown from the last 7 days · ${primary.device.device_code}`;
+  const firstRunStamp=stampOf(history[0]), lastRunStamp=stampOf(history.at(-1));
+  const runHours=firstRunStamp&&lastRunStamp?Math.max(0,(new Date(lastRunStamp)-new Date(firstRunStamp))/3600000):0;
+  $('#chart-note').textContent=`${history.length.toLocaleString()} readings from current run ${primary.latest?.run_id||''} · ${runHours.toFixed(1)} h of data`;
 
   const newest=history[history.length-1];
   const six=findReadingNear(history,6,newest);
@@ -242,13 +248,13 @@ async function loadPlantData(user){
     sixChange>0 ? 'shows a recent weight increase, likely an irrigation or handling event' :
     'is currently very stable';
 
-  $('#primary-summary').textContent=`${plantLabel(primary)} ${direction}. Sykerbos has ${Number(primary.reading_count||0).toLocaleString()} recorded readings from ${primary.device.device_code}.`;
+  $('#primary-summary').textContent=`${plantLabel(primary)} ${direction}. Sykerbos has ${Number(primary.reading_count||0).toLocaleString()} readings in the active run on ${primary.device.device_code}.`;
 
   $('#intelligence-title').textContent=`Learning ${plantLabel(primary)}.`;
-  $('#intelligence-copy').textContent=`This view is now using the real weight and temperature history already stored by ${primary.device.device_code}. Irrigation recognition and predictions come next.`;
-  const progress=Math.min(100,Math.round((Number(primary.reading_count||0)/2000)*100));
+  $('#intelligence-copy').textContent=`This view uses the active telemetry run (${primary.latest?.run_id||'current run'}) rather than mixing older experiments with the live plant. Irrigation recognition and predictions come next.`;
+  const progress=Math.min(100,Math.round((Number(primary.reading_count||0)/72)*100));
   $('#learning-progress-bar').style.width=progress+'%';
-  $('#learning-progress-note').textContent=`${Number(primary.reading_count||0).toLocaleString()} readings available · live data foundation established`;
+  $('#learning-progress-note').textContent=`${Number(primary.reading_count||0).toLocaleString()} current-run readings · ${Number(primary.lifetime_reading_count||0).toLocaleString()} lifetime stored`;
 }
 
 async function init(){
