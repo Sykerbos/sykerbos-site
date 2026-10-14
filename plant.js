@@ -50,6 +50,28 @@ function showDelta(selector,n){
   if(!el) return;
   el.textContent=n===null?'—':(n>0?'+':'')+n.toFixed(1)+' g';
 }
+function slopePerDay(readings){
+  const pts=(readings||[])
+    .filter(r=>Number.isFinite(Number(r.weight_g))&&stampOf(r))
+    .map(r=>({x:timeOf(r)/1000,y:Number(r.weight_g)}));
+  if(pts.length<3) return null;
+  const mx=pts.reduce((s,p)=>s+p.x,0)/pts.length;
+  const my=pts.reduce((s,p)=>s+p.y,0)/pts.length;
+  const num=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
+  const den=pts.reduce((s,p)=>s+(p.x-mx)*(p.x-mx),0);
+  return den?num/den*86400:null;
+}
+function windowReadings(readings,hours,anchor){
+  if(!anchor) return [];
+  const cutoff=timeOf(anchor)-hours*3600000;
+  return (readings||[]).filter(r=>timeOf(r)>=cutoff&&timeOf(r)<=timeOf(anchor));
+}
+function showDryDown(selector,slope){
+  const el=$(selector);
+  if(!el) return;
+  if(slope===null){el.textContent='—';return;}
+  el.textContent=slope<0?Math.abs(slope).toFixed(1)+' g/day':'+'+slope.toFixed(1)+' g/day';
+}
 
 function drawChart(readings){
   const host=$('#plant-chart');
@@ -106,8 +128,10 @@ async function loadRange(deviceId,hours,runId=null){
   const newest=readings.at(-1)||anchor;
   const six=readingNear(readings,6,newest);
   const twelve=readingNear(readings,12,newest);
-  showDelta('#plant-6h-change',delta(six,newest));
-  showDelta('#plant-12h-change',delta(twelve,newest));
+  const sixSlope=slopePerDay(windowReadings(readings,6,newest));
+  const twelveSlope=slopePerDay(windowReadings(readings,12,newest));
+  showDryDown('#plant-6h-change',six&&sixSlope!==null?sixSlope:null);
+  showDryDown('#plant-12h-change',twelve&&twelveSlope!==null?twelveSlope:null);
 }
 
 async function init(){
@@ -140,10 +164,19 @@ async function init(){
   $('#plant-device-label').textContent=device.device_code;
 
   const [{data:latestRows},{data:summaryRows}]=await Promise.all([
-    supabase.from('readings').select('weight_g,temperature_c,measured_at,created_at').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1),
+    supabase.from('readings').select('weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1),
     supabase.from('device_reading_summary').select('*').eq('device_id',device.id).limit(1)
   ]);
   const latest=latestRows?.[0]||null, summary=summaryRows?.[0]||null;
+  let runSummary=null;
+  if(latest?.run_id){
+    const {data:runRows}=await supabase.from('device_run_summary')
+      .select('*')
+      .eq('device_id',device.id)
+      .eq('run_id',latest.run_id)
+      .limit(1);
+    runSummary=runRows?.[0]||null;
+  }
   const fresh=stampOf(latest)&&(Date.now()-new Date(stampOf(latest)).getTime()<90*60000);
   const maintenance=p.status==='offline'||device.status==='maintenance';
   $('#plant-status').textContent=maintenance?'Maintenance':fresh?'Connected':'Last seen '+ageLabel(stampOf(latest));
@@ -153,7 +186,7 @@ async function init(){
   }
   $('#plant-weight').textContent=latest?fmt(latest.weight_g)+' g':'—';
   $('#plant-temperature').textContent=latest?fmt(latest.temperature_c)+' °C':'—';
-  $('#plant-reading-count').textContent=Number(summary?.reading_count||0).toLocaleString();
+  $('#plant-reading-count').textContent=Number(runSummary?.reading_count||summary?.reading_count||0).toLocaleString();
   if(!maintenance){
     $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
   }
@@ -163,15 +196,14 @@ async function init(){
     const percent=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
     $('#radial-gauge').style.setProperty('--level',percent.toFixed(1));
     $('#range-percent').textContent=Math.round(percent)+'%';
-    $('#range-low').textContent=low.toFixed(1)+' g'; $('#range-high').textContent=high.toFixed(1)+' g';
     $('#range-low-side').textContent=low.toFixed(0)+' g'; $('#range-high-side').textContent=high.toFixed(0)+' g';
     $('#plant-action-title').textContent=percent<20?'Near the dry end of its observed range.':percent>80?'Near the wet end of its observed range.':'Inside its observed range.';
     $('#plant-action-copy').textContent=`Current weight is ${Math.round(percent)}% of the way from the lowest to highest recorded weight. This is descriptive, not yet a watering recommendation.`;
   }
 
-  const count=Number(summary?.reading_count||0);
+  const count=Number(runSummary?.reading_count||summary?.reading_count||0);
   $('#plant-intelligence-title').textContent='Learning '+plantName(p)+'.';
-  $('#plant-intelligence-copy').textContent=`Sykerbos has ${count.toLocaleString()} readings from ${device.device_code}. We can now build irrigation recognition and plant-specific thresholds on top of real history.`;
+  $('#plant-intelligence-copy').textContent=`Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''} from ${device.device_code}. Historical runs remain stored separately for comparison.`;
   $('#plant-learning-bar').style.width=Math.min(100,Math.round(count/20))+'%';
   $('#plant-learning-note').textContent=count.toLocaleString()+' recorded readings';
 
