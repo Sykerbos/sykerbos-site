@@ -39,7 +39,7 @@ export const PLANT_ASSETS = {
     image: 'assets/plants/valencia-orange-seedling.png',
     sourcePage: 'Sykerbos generated Herbarium asset',
     license: 'Sykerbos project asset',
-    dossier: null
+    dossier: 'herbarium-orange.html'
   },
   peaceLily: {
     names: ['peace lily','spathiphyllum'],
