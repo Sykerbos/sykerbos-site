@@ -77,3 +77,37 @@ document.querySelectorAll('.recommendation-grid button').forEach(button=>{
   });
 });
 document.querySelector('.add-card')?.addEventListener('click',()=>location.href='start.html?new=1');
+
+
+const claimButton=document.querySelector('#claim-alpha-button');
+const claimCode=document.querySelector('#claim-code');
+const claimMessage=document.querySelector('#claim-message');
+
+claimButton?.addEventListener('click',async()=>{
+  const code=claimCode.value.trim();
+  if(!code){
+    claimMessage.textContent='Enter the claim code first.';
+    claimMessage.className='claim-message error';
+    return;
+  }
+
+  claimButton.disabled=true;
+  claimMessage.textContent='Claiming your Alpha devices…';
+  claimMessage.className='claim-message';
+
+  const {data,error}=await supabase.functions.invoke('claim-alpha-devices',{
+    body:{code}
+  });
+
+  claimButton.disabled=false;
+
+  if(error || data?.error){
+    claimMessage.textContent=data?.error||error?.message||'Claim failed.';
+    claimMessage.className='claim-message error';
+    return;
+  }
+
+  claimMessage.textContent='Claimed: '+(data.devices||[]).join(', ');
+  claimMessage.className='claim-message success';
+  setTimeout(()=>location.reload(),900);
+});
