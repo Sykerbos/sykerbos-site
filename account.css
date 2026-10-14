@@ -1,0 +1,9 @@
+.account-body{min-height:100vh;background:linear-gradient(145deg,#f7f4ec,#edf1e8);display:grid;place-items:center;padding:24px}
+.account-shell{width:min(980px,100%)}.account-brand{margin:0 auto 24px;width:max-content}
+.account-card{display:grid;grid-template-columns:1fr .9fr;gap:34px;background:white;border:1px solid var(--line);border-radius:30px;padding:clamp(28px,5vw,56px);box-shadow:var(--shadow)}
+.account-copy h1{font-size:clamp(2.5rem,5vw,4.5rem);margin-bottom:18px}.account-copy p:last-child{color:var(--muted);max-width:520px}
+.account-tabs{grid-column:2;display:grid;grid-template-columns:1fr 1fr;background:#eef0ea;border-radius:999px;padding:5px;align-self:start}.account-tabs button{border:0;background:transparent;padding:10px;border-radius:999px;font-weight:700;color:var(--muted)}.account-tabs button.active{background:white;color:var(--ink);box-shadow:0 3px 12px rgba(18,61,50,.08)}
+#account-form{grid-column:2;display:grid;gap:14px;margin-top:-20px}#account-form label{display:grid;gap:6px;font-weight:700;color:var(--ink)}#account-form input{width:100%;padding:14px 15px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;color:var(--ink)}
+.account-divider{grid-column:2;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.82rem}.account-divider:before,.account-divider:after{content:"";height:1px;background:var(--line);flex:1}
+.guest-button,.guest-note,.account-message{grid-column:2}.guest-button{width:100%}.guest-note{font-size:.84rem;color:var(--muted);margin:0}.account-message{min-height:24px;margin:0;font-size:.9rem}.account-message.error{color:#9a3f31}.account-message.success{color:#2d6e43}
+@media(max-width:760px){.account-card{grid-template-columns:1fr}.account-tabs,#account-form,.account-divider,.guest-button,.guest-note,.account-message{grid-column:1}.account-tabs{margin-top:8px}#account-form{margin-top:0}}
