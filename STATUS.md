@@ -57,14 +57,14 @@ This file is the working implementation map for the current prototype. It distin
 - Plant recommendation cards
 - Want-to-grow buttons toggle locally
 - Device status teaser
-- Secure one-time Alpha claim flow via Supabase Edge Function
+- Secure Alpha claim flow exists in backend; claimed-user dashboard no longer shows the temporary claim panel
 - Email/password account creation and sign-in
 - Guest/anonymous sign-in UI (requires Supabase Anonymous Sign-Ins toggle)
 - Supabase user/device ownership schema with RLS
 - Plants backend model with plant ↔ device assignment, primary plant, display order, and RLS
 - Plant assignment screen for claimed VyTiles, including main-plant selection
 - Existing Alpha readings backfilled to registered devices
-- Dedicated plant detail page with Today / Intelligence / Herbarium tabs
+- Dedicated plant detail page now loads the selected Supabase plant, real telemetry history, observed range and Herbarium asset
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
 - Reference Herbarium entries for Basil, Thyme, Mint, and Oregano
@@ -129,7 +129,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 ## Next build targets
 
-1. Redesign Home around the saved primary plant plus the rest of the user's plants.
+1. Refine Home layout and plant analytics using real telemetry; add irrigation event recognition next.
 2. Replace remaining placeholder plant/product imagery as approved assets become available.
 3. Separate authenticated app into `sykerbos-app` once the UX stabilizes.
 4. Create `vytile-firmware` repository with semantic firmware versions.
