@@ -1,3 +1,60 @@
+
+const claimButton=document.querySelector('#claim-alpha-button');
+const claimCode=document.querySelector('#claim-code');
+const claimMessage=document.querySelector('#claim-message');
+
+function setClaimMessage(text,type=''){
+  if(!claimMessage) return;
+  claimMessage.textContent=text;
+  claimMessage.className='claim-message'+(type?' '+type:'');
+}
+
+if(claimButton){
+  claimButton.addEventListener('click',async()=>{
+    const code=(claimCode?.value||'').trim();
+    if(!code){
+      setClaimMessage('Enter the claim code first.','error');
+      return;
+    }
+
+    claimButton.disabled=true;
+    setClaimMessage('Contacting Sykerbos…');
+
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      if(!session){
+        setClaimMessage('Your sign-in session has expired. Please sign in again.','error');
+        return;
+      }
+
+      const response=await fetch('https://nyivtwiliacawkfcyget.supabase.co/functions/v1/claim-alpha-devices',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'apikey':'sb_publishable_9aNvqxT3JXKqFLCyj-Ckeg_85lOHX2B',
+          'Authorization':'Bearer '+session.access_token
+        },
+        body:JSON.stringify({code})
+      });
+
+      let payload={};
+      try{ payload=await response.json(); }catch{}
+
+      if(!response.ok || payload?.error){
+        setClaimMessage(payload?.error||('Claim request failed ('+response.status+').'),'error');
+        return;
+      }
+
+      setClaimMessage('Claimed: '+(payload.devices||[]).join(', '),'success');
+      setTimeout(()=>location.reload(),900);
+    }catch(error){
+      setClaimMessage('Could not reach the claim service. Please try again.','error');
+    }finally{
+      claimButton.disabled=false;
+    }
+  });
+}
+
 import { supabase } from './supabase-client.js';
 
 const savedName=localStorage.getItem('sykerbosPlantName')||'Kitchen Rosemary';
@@ -79,35 +136,3 @@ document.querySelectorAll('.recommendation-grid button').forEach(button=>{
 document.querySelector('.add-card')?.addEventListener('click',()=>location.href='start.html?new=1');
 
 
-const claimButton=document.querySelector('#claim-alpha-button');
-const claimCode=document.querySelector('#claim-code');
-const claimMessage=document.querySelector('#claim-message');
-
-claimButton?.addEventListener('click',async()=>{
-  const code=claimCode.value.trim();
-  if(!code){
-    claimMessage.textContent='Enter the claim code first.';
-    claimMessage.className='claim-message error';
-    return;
-  }
-
-  claimButton.disabled=true;
-  claimMessage.textContent='Claiming your Alpha devices…';
-  claimMessage.className='claim-message';
-
-  const {data,error}=await supabase.functions.invoke('claim-alpha-devices',{
-    body:{code}
-  });
-
-  claimButton.disabled=false;
-
-  if(error || data?.error){
-    claimMessage.textContent=data?.error||error?.message||'Claim failed.';
-    claimMessage.className='claim-message error';
-    return;
-  }
-
-  claimMessage.textContent='Claimed: '+(data.devices||[]).join(', ');
-  claimMessage.className='claim-message success';
-  setTimeout(()=>location.reload(),900);
-});
