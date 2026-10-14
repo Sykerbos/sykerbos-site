@@ -1,6 +1,6 @@
 # Sykerbos Site / App Prototype Status
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 This file is the working implementation map for the current prototype. It distinguishes working navigation from visual/demo-only elements so we do not lose track as the interface grows.
 
@@ -19,6 +19,7 @@ This file is the working implementation map for the current prototype. It distin
 - Public-site `My Sykerbos` entry opens sign-in or redirects an existing session to the dashboard
 - `Preview setup` opens onboarding
 - GitHub Pages deployment from `main`
+- Approved hero imagery is now wired into the main hero, VyTile range, and commercial section
 
 ### Onboarding
 - `start.html`
@@ -110,7 +111,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 ## Visual placeholders to replace
 
 - Generic fallback thumbnails for plants without a Herbarium image
-- Placeholder product-range illustrations
+- Remaining product copy / naming may evolve as hardware is engineered
 - Demo chart
 - Temporary icons / symbols
 
