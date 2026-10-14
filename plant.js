@@ -74,9 +74,9 @@ function recentEvents(readings){
   host.innerHTML=pts.map((r,i)=>`<article><span class="event-icon">${i===0?'●':'·'}</span><div><strong>${fmt(r.weight_g)} g · ${fmt(r.temperature_c)} °C</strong><small>${new Date(stampOf(r)).toLocaleString()}</small></div></article>`).join('');
 }
 
-async function loadRange(deviceId,hours){
+async function loadRange(deviceId,hours,runId=null){
   const {data:latestRows,error:latestError}=await supabase.from('readings')
-    .select('weight_g,temperature_c,measured_at,created_at')
+    .select('weight_g,temperature_c,measured_at,created_at,run_id')
     .eq('device_id',deviceId)
     .order('measured_at',{ascending:false,nullsFirst:false})
     .order('created_at',{ascending:false})
@@ -88,18 +88,20 @@ async function loadRange(deviceId,hours){
     return;
   }
   const since=new Date(timeOf(anchor)-hours*3600000).toISOString();
-  const {data,error}=await supabase.from('readings')
-    .select('weight_g,temperature_c,measured_at,created_at')
+  let rangeQuery=supabase.from('readings')
+    .select('weight_g,temperature_c,measured_at,created_at,run_id')
     .eq('device_id',deviceId)
-    .gte('created_at',since)
-    .lte('created_at',new Date(timeOf(anchor)+60000).toISOString())
-    .order('created_at',{ascending:true})
+    .gte('measured_at',since)
+    .lte('measured_at',new Date(timeOf(anchor)+60000).toISOString())
+    .order('measured_at',{ascending:true})
     .limit(5000);
+  if(runId) rangeQuery=rangeQuery.eq('run_id',runId);
+  const {data,error}=await rangeQuery;
   if(error) throw error;
   const readings=data||[];
   drawChart(readings);
   recentEvents(readings);
-  $('#plant-chart-note').textContent=`${readings.length.toLocaleString()} readings · range ends at latest VyTile reading`;
+  $('#plant-chart-note').textContent=`${readings.length.toLocaleString()} current-run readings${runId?' · '+runId:''}`;
 
   const newest=readings.at(-1)||anchor;
   const six=readingNear(readings,6,newest);
@@ -177,9 +179,9 @@ async function init(){
   const hoursFor={'24h':24,'7d':168,'30d':720};
   rangeButtons.forEach(button=>button.addEventListener('click',async()=>{
     rangeButtons.forEach(b=>b.classList.toggle('active',b===button));
-    await loadRange(device.id,hoursFor[button.textContent.trim()]||24);
+    await loadRange(device.id,hoursFor[button.textContent.trim()]||24,latest?.run_id||null);
   }));
-  await loadRange(device.id,24);
+  await loadRange(device.id,24,latest?.run_id||null);
 }
 
 init();
