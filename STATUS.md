@@ -65,6 +65,7 @@ This file is the working implementation map for the current prototype. It distin
 - Plant assignment screen for claimed VyTiles, including main-plant selection
 - Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page now loads the selected Supabase plant, real telemetry history, observed range and Herbarium asset
+- Observed-range radial gauge uses a robust 5th–95th percentile weight band to reduce calibration/setup outlier distortion
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
 - Reference Herbarium entries for Basil, Thyme, Mint, and Oregano
