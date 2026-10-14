@@ -1,11 +1,5 @@
 import { supabase } from './supabase-client.js';
-
-const CITRUS_IMAGE='https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Pomological_Watercolor_POM00000265.jpg/960px-Pomological_Watercolor_POM00000265.jpg';
-
-const herbariumImages=[
-  {test:/rosemary|salvia rosmarinus/i,url:'assets/hero/rosemary-vytile.png',position:'50% 63%'},
-  {test:/valencia orange|orange seedling|citrus.*sinensis/i,url:CITRUS_IMAGE,position:'50% 38%'}
-];
+import { plantAssetFor } from './plant-assets.js';
 
 const $=selector=>document.querySelector(selector);
 const fmt=(value,digits=1)=>{
@@ -16,10 +10,7 @@ const stampOf=r=>r?.measured_at||r?.created_at||null;
 const readingTime=r=>new Date(stampOf(r)||0).getTime();
 const plantLabel=p=>p.nickname||p.common_name||'Unnamed plant';
 const speciesLabel=p=>[p.common_name,p.botanical_name].filter(Boolean).join(' · ');
-const imageFor=p=>{
-  const source=[p.common_name,p.botanical_name,p.nickname].filter(Boolean).join(' ');
-  return herbariumImages.find(item=>item.test.test(source))||null;
-};
+const imageFor=p=>plantAssetFor(p);
 
 function setImage(el,plant){
   const image=imageFor(plant);
@@ -279,29 +270,6 @@ document.querySelectorAll('.recommendation-grid button').forEach(button=>{
     button.dataset.saved=String(!saved);
     button.textContent=saved?'♡ Want to grow':'♥ Saved';
   });
-});
-
-const claimButton=$('#claim-alpha-button');
-claimButton?.addEventListener('click',async()=>{
-  const code=$('#claim-code')?.value.trim();
-  const message=$('#claim-message');
-  if(!code){message.textContent='Enter the claim code first.';return;}
-  claimButton.disabled=true;
-  message.textContent='Contacting Sykerbos…';
-  try{
-    const {data:{session}}=await supabase.auth.getSession();
-    const response=await fetch('https://nyivtwiliacawkfcyget.supabase.co/functions/v1/claim-alpha-devices',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','apikey':'sb_publishable_9aNvqxT3JXKqFLCyj-Ckeg_85lOHX2B','Authorization':'Bearer '+session.access_token},
-      body:JSON.stringify({code})
-    });
-    const payload=await response.json().catch(()=>({}));
-    if(!response.ok||payload?.error){message.textContent=payload?.error||'Claim failed.';return;}
-    message.textContent='Claimed: '+(payload.devices||[]).join(', ');
-    setTimeout(()=>location.reload(),700);
-  }catch{
-    message.textContent='Could not reach the claim service.';
-  }finally{claimButton.disabled=false;}
 });
 
 init();
