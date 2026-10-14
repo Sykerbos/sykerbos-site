@@ -111,7 +111,7 @@ async function init(){
   $('#plant-reading-count').textContent=Number(summary?.reading_count||0).toLocaleString();
   $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
 
-  const low=Number(summary?.min_weight_g), high=Number(summary?.max_weight_g), current=Number(latest?.weight_g);
+  const low=Number(summary?.p05_weight_g), high=Number(summary?.p95_weight_g), current=Number(latest?.weight_g);
   if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
     const percent=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
     $('#radial-gauge').style.setProperty('--level',percent.toFixed(1));
