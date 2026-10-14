@@ -131,6 +131,8 @@ These elements look functional but currently use demo or placeholder behaviour:
 
 - Alpha01 is manually marked as maintenance/offline and is sorted below active plants while retaining historical data.
 
+- Herbarium photo direction locked: warm cream studio background, living attached growth, warm natural light, varied species-specific composition; first seven-image set approved pending binary import.
+
 ## Next build targets
 
 1. Refine Home layout and plant analytics using real telemetry; add irrigation event recognition next.
