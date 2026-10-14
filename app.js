@@ -94,23 +94,33 @@ function renderPlantCards(plants){
   const host=$('#plant-list');
   if(!host) return;
 
-  const secondary=plants.filter(p=>!p.is_primary);
+  const secondary=plants
+    .filter(p=>!p.is_primary)
+    .sort((a,b)=>{
+      const aDown=(a.status==='offline'||a.device?.status==='maintenance')?1:0;
+      const bDown=(b.status==='offline'||b.device?.status==='maintenance')?1:0;
+      if(aDown!==bDown) return aDown-bDown;
+      return (a.display_order??0)-(b.display_order??0);
+    });
   const cards=secondary.map(p=>{
     const r=p.latest;
     const age=formatAge(stampOf(r));
     const fresh=stampOf(r) && (Date.now()-new Date(stampOf(r)).getTime()<90*60000);
+    const maintenance=p.status==='offline'||p.device?.status==='maintenance';
     const image=imageFor(p);
     const bg=image?`style="background-image:url('${image.image}');background-position:${'center'}"`:'';
     const cls=image?'plant-thumb herbarium-thumb has-image':'plant-thumb herbarium-thumb';
     const fallback=!image?(p.common_name||p.nickname||'P').slice(0,1).toUpperCase():'';
-    return `<a class="plant-collection-card" href="plant.html?plant=${encodeURIComponent(p.id)}" data-plant-id="${p.id}">
+    const stateLabel=maintenance?'Maintenance':fresh?'Connected':'Last seen '+age;
+    const stateClass=maintenance?'offline':fresh?'good':'learning';
+    return `<a class="plant-collection-card ${maintenance?'offline-card':''}" href="plant.html?plant=${encodeURIComponent(p.id)}" data-plant-id="${p.id}">
       <div class="${cls}" ${bg} data-fallback="${fallback}"></div>
       <div class="plant-collection-copy">
-        <span class="status ${fresh?'good':'learning'}">${fresh?'Connected':'Last seen '+age}</span>
+        <span class="status ${stateClass}">${stateLabel}</span>
         <h3>${plantLabel(p)}</h3>
         <p>${speciesLabel(p)||p.device?.device_code||'Plant'}</p>
         <div class="mini-reading"><strong>${fmt(r?.weight_g)} g</strong><span>${fmt(r?.temperature_c)} °C</span></div>
-        <small>${p.device?.device_code||''} · ${Number(p.reading_count||0).toLocaleString()} readings</small>
+        <small>${p.device?.device_code||''} · ${maintenance?'Electronics rebuild pending':Number(p.reading_count||0).toLocaleString()+' readings'}</small>
       </div>
     </a>`;
   });
@@ -140,7 +150,7 @@ async function loadPlantData(user){
   }
 
   const deviceIds=plants.map(p=>p.device_id).filter(Boolean);
-  const {data:devices}=await supabase.from('devices').select('id,device_code,model').in('id',deviceIds);
+  const {data:devices}=await supabase.from('devices').select('id,device_code,model,status').in('id',deviceIds);
   const deviceMap=new Map((devices||[]).map(d=>[d.id,d]));
 
   const enriched=[];
