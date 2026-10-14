@@ -49,7 +49,7 @@ This file is the working implementation map for the current prototype. It distin
 - Summary / current plant card
 - Live 6-hour and 12-hour net weight change from Supabase readings, anchored to the latest actual device reading and suppressed when the requested window is not covered
 - Live latest weight and temperature for claimed devices
-- Home dashboard reads real plant records, primary-plant selection, reading counts, and seven-day weight history
+- Home dashboard reads real plant records and filters short-term telemetry to the active `run_id` so historical experiments/reboots are not mixed into the live graph
 - Live seven-day weight-trend visual
 - Sykerbos learning state
 - Your Plants section
