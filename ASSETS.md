@@ -44,3 +44,15 @@ Approved first-set binaries are now stored under `assets/plants/` and the runtim
 - If no species match exists, show a quiet botanical fallback rather than inventing an image.
 - Keep image source and licence metadata here when external material is introduced.
 - Long term, move approved external images into version-controlled local assets so Sykerbos does not depend on third-party hotlinks.
+
+
+## Product / hero imagery
+
+| Asset | File | Use |
+| --- | --- | --- |
+| VyTile product hero | `assets/hero/vytile-product-hero.png.png` | Mini/product presentation |
+| VyTile home hero | `assets/hero/vytile-home-hero.png.png` | Main public hero and Home product card |
+| VyTile balcony hero | `assets/hero/vytile-balcony-hero.png.png` | Balcony / larger-pot concept |
+| VyTile commercial hero | `assets/hero/vytile-commercial-hero.png.png` | Commercial rail concept |
+
+Commercial image is a visual target / concept, not yet final engineered hardware. Public copy must not imply that the final mechanical design is already production-ready.
