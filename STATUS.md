@@ -16,6 +16,7 @@ This file is the working implementation map for the current prototype. It distin
   - Commercial section
   - About / What’s Growing section
 - `Set up VyTile` opens onboarding
+- Public-site `My Sykerbos` entry opens sign-in or redirects an existing session to the dashboard
 - `Preview setup` opens onboarding
 - GitHub Pages deployment from `main`
 
