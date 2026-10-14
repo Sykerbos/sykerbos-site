@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Set up your plants — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="plant-setup.css">
+</head>
+<body class="setup-body">
+  <header class="setup-header">
+    <a class="brand brand-image-link" href="app.html" aria-label="Sykerbos"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
+    <a class="text-link" href="app.html">Back to Home</a>
+  </header>
+
+  <main class="setup-shell">
+    <section class="setup-intro">
+      <p class="eyebrow">Your plants</p>
+      <h1>Tell Sykerbos what is sitting on each VyTile.</h1>
+      <p class="lede">Each plant gets its own identity, history and intelligence. Choose one plant as the main plant for your Home dashboard.</p>
+    </section>
+
+    <section id="device-forms" class="device-forms" aria-live="polite">
+      <article class="setup-card loading-card">
+        <p>Loading your claimed VyTiles…</p>
+      </article>
+    </section>
+
+    <section class="setup-footer">
+      <p id="setup-message" class="setup-message" aria-live="polite"></p>
+      <div class="setup-actions">
+        <a class="button button-secondary" href="app.html">Cancel</a>
+        <button id="save-plants" class="button" type="button">Save plants</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="plant-setup.js"></script>
+</body>
+</html>
