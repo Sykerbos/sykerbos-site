@@ -47,7 +47,7 @@ This file is the working implementation map for the current prototype. It distin
 - Plant identity is loaded from the authenticated user's Supabase plant records
 - Responsive desktop and mobile navigation
 - Summary / current plant card
-- Live 6-hour and 24-hour net weight change from Supabase readings
+- Live 6-hour and 12-hour net weight change from Supabase readings, anchored to the latest actual device reading and suppressed when the requested window is not covered
 - Live latest weight and temperature for claimed devices
 - Home dashboard reads real plant records, primary-plant selection, reading counts, and seven-day weight history
 - Live seven-day weight-trend visual
@@ -68,7 +68,7 @@ This file is the working implementation map for the current prototype. It distin
 - Observed-range radial gauge uses a robust 5th–95th percentile weight band to reduce calibration/setup outlier distortion
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
-- Reference Herbarium entries for Basil, Thyme, Mint, and Oregano
+- Reference Herbarium entries for Basil, Thyme, Mint, Oregano, and Valencia Orange
 
 ## Prototype / not yet connected to real systems
 
