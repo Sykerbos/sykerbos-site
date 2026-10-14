@@ -68,3 +68,7 @@
 .settings-tease{margin-top:36px;padding:20px 24px;background:white;border:1px solid var(--line);border-radius:22px}
 .settings-tease.section-block{padding-top:20px}
 @media(max-width:760px){.settings-tease{margin-top:28px}}
+
+.status.offline{background:#eee9e1;color:#746f68}
+.plant-collection-card.offline-card{opacity:.72}
+.plant-collection-card.offline-card:hover{opacity:.9}
