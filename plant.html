@@ -62,24 +62,26 @@
           <div class="plant-chart" id="plant-chart" aria-label="Live plant weight curve">
             <div class="chart-loading">Loading live history…</div>
           </div>
-          <div class="chart-summary">
-            <div><small>6-hour dry-down</small><strong id="plant-6h-change">—</strong></div>
-            <div><small>12-hour dry-down</small><strong id="plant-12h-change">—</strong></div>
-            <div><small>Selected-range change</small><strong id="range-net-change">—</strong></div>
+          <div class="chart-summary intelligence-summary">
+            <div><small>Current use</small><strong id="plant-current-rate">—</strong><span id="plant-current-rate-note">Learning dry-down rate</span></div>
+            <div><small>Recent movement</small><strong id="plant-recent-movement">—</strong><span id="plant-recent-movement-note">Last 12 hours</span></div>
+            <div><small>Projected reserve</small><strong id="plant-projected-days">—</strong><span id="plant-projected-note">Learning plant curve</span></div>
           </div>
           <p class="panel-note" id="plant-chart-note">Live VyTile readings.</p>
         </article>
 
         <aside class="today-side">
           <article class="panel moisture-position">
-            <p class="eyebrow">Observed water range</p>
+            <p class="eyebrow">Water reserve</p>
             <div class="radial-wrap">
-              <div class="radial-gauge" id="radial-gauge" style="--level:0">
-                <div><strong id="range-percent">—</strong><small>of observed range</small></div>
+              <div class="radial-gauge" id="radial-gauge" style="--level:0;--angle:0deg;--pref-start:40;--pref-size:0">
+                <div><strong id="range-percent">Learning</strong><small>water reserve</small></div>
+                <span class="preferred-band" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="range-scale"><span><small>Dry end</small><strong id="range-low-side">—</strong></span><span><small>Wet end</small><strong id="range-high-side">—</strong></span></div>
-            <p id="range-explanation">This recent water-position view uses the latest 72 readings, so older calibration or temperature tests do not distort the range. It is descriptive, not yet a watering recommendation.</p>
+            <div class="preferred-band-row"><span class="preferred-swatch"></span><span id="preferred-band-label">Preferred range · learning</span></div>
+            <div class="range-scale"><span><small>Recent low</small><strong id="range-low-side">—</strong></span><span><small>Recent high</small><strong id="range-high-side">—</strong></span></div>
+            <p id="range-explanation">The recent 72-reading band protects this view from old calibration tests. A true reserve percentage will appear once Sykerbos has learned stable dry and saturated thresholds for this plant.</p>
           </article>
 
           <article class="panel next-action">
@@ -141,6 +143,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261014-2"></script>
+  <script type="module" src="plant.js?v=20261014-3"></script>
 </body>
 </html>
