@@ -69,7 +69,8 @@ This file is the working implementation map for the current prototype. It distin
 - Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page now loads the selected Supabase plant, real telemetry history, observed range and Herbarium asset
 - Plant detail page now filters chart data to the active run and shows regression-based 6h/12h dry-down rates
-- Observed-range radial gauge uses a robust 5th–95th percentile weight band to reduce calibration/setup outlier distortion
+- Observed-range radial gauge uses the latest 72 readings from the active run, with a robust 5th–95th percentile band so older calibration/temperature experiments do not distort the current moisture position
+- Radial moisture scale now communicates dry→ideal→wet with orange/yellow→green→dark blue plus a current-position marker
 - Herbarium index page
 - Rosemary Herbarium dossier based on locked 7-section template
 - Reference Herbarium entries for Basil, Thyme, Mint, Oregano, and Valencia Orange
