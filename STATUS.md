@@ -68,7 +68,9 @@ This file is the working implementation map for the current prototype. It distin
 - Plant assignment screen for claimed VyTiles, including main-plant selection
 - Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page now loads the selected Supabase plant, real telemetry history, observed range and Herbarium asset
-- Plant detail page now filters chart data to the active run and shows regression-based 6h/12h dry-down rates
+- Plant detail page now filters chart data to the active run and shows a single current-use dry-down rate, recent movement, and projected reserve window
+- Valencia-orange prototype model treats the observed 14 → 8 → 6 → 3 g/day decline as experimental expected behaviour and exposes the ~18 g / ~3-day reserve trigger as provisional logic
+- Water-reserve percentage is withheld until stable dry/saturated thresholds are learned; the 72-reading band remains a recent reference only
 - Observed-range radial gauge uses the latest 72 readings from the active run, with a robust 5th–95th percentile band so older calibration/temperature experiments do not distort the current moisture position
 - Radial moisture scale now communicates dry→ideal→wet with orange/yellow→green→dark blue plus a current-position marker
 - Herbarium index page
