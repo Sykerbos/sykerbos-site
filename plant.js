@@ -87,6 +87,15 @@ function behaviorProfile(plant){
   return null;
 }
 
+function confidenceFromCycles(cycles){
+  const n=Math.max(0,Number(cycles)||0);
+  if(n>=8) return {pct:100,label:'High confidence'};
+  if(n>=5) return {pct:80,label:'Strong pattern'};
+  if(n>=3) return {pct:60,label:'Building confidence'};
+  if(n>=1) return {pct:35,label:'Early repeatability'};
+  return {pct:15,label:'Early evidence'};
+}
+
 function forecastFromRate(rate,profile,reserveG=null){
   if(!profile) return null;
   const use=Number.isFinite(rate)?Math.abs(rate):null;
@@ -191,6 +200,15 @@ async function loadRange(deviceId,hours,runId=null){
   if(forecast&&profile){
     $('#plant-action-title').textContent=forecast.stage+'.';
     $('#plant-action-copy').textContent=forecast.next;
+  }
+
+  const intelRate=$('#intelligence-current-rate');
+  if(intelRate) intelRate.textContent=Number.isFinite(currentRate)?Math.abs(currentRate).toFixed(1)+' g/day':'—';
+  const evidenceSlope=$('#evidence-slope');
+  if(evidenceSlope){
+    evidenceSlope.textContent=Number.isFinite(currentRate)
+      ? 'Current use '+Math.abs(currentRate).toFixed(1)+' g/day'
+      : 'Dry-down curve learning';
   }
 }
 
@@ -330,6 +348,41 @@ async function init(){
     : `Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''} from ${device.device_code}. Historical runs remain stored separately for comparison.`;
   $('#plant-learning-bar').style.width=Math.min(100,Math.round(count/20))+'%';
   $('#plant-learning-note').textContent=count.toLocaleString()+' recorded readings';
+
+  const cycles=Number(p.cycles_observed||0);
+  const confidence=confidenceFromCycles(cycles);
+  $('#confidence-title').textContent=confidence.label;
+  $('#confidence-number').textContent=confidence.pct+'%';
+  $('#confidence-track-bar').style.width=confidence.pct+'%';
+  $('#confidence-copy').textContent=cycles
+    ? `${cycles} validated cycle${cycles===1?'':'s'} recorded. Confidence increases when future cycles reproduce the same thresholds and dry-down shape.`
+    : 'No automatically validated cycles yet. The current model is experimental evidence; the first repeatable irrigation/dry-down cycle will start increasing confidence.';
+  $('#evidence-cycles').textContent=cycles+' validated cycle'+(cycles===1?'':'s');
+
+  const dryThreshold=Number(p.learned_dry_g??p.provisional_dry_g);
+  const wetThreshold=Number(p.learned_saturated_g??p.provisional_saturated_g);
+  const triggerG=profile&&Number.isFinite(dryThreshold)?dryThreshold+profile.reserveTriggerG:null;
+  if(Number.isFinite(dryThreshold)) $('#intel-dry').textContent=dryThreshold.toFixed(0)+' g';
+  if(Number.isFinite(wetThreshold)) $('#intel-wet').textContent=wetThreshold.toFixed(0)+' g';
+  if(Number.isFinite(triggerG)) $('#intel-trigger').textContent=triggerG.toFixed(0)+' g';
+  if(Number.isFinite(current)) $('#intel-current').textContent=current.toFixed(1)+' g';
+
+  if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
+    const place=v=>Math.max(0,Math.min(100,((v-dryThreshold)/(wetThreshold-dryThreshold))*100));
+    $('#reserve-dry-marker').style.left='0%';
+    $('#reserve-wet-marker').style.left='100%';
+    if(Number.isFinite(triggerG)) $('#reserve-trigger-marker').style.left=place(triggerG)+'%';
+    if(Number.isFinite(current)) $('#reserve-current-marker').style.left=place(current)+'%';
+    $('#evidence-reserve').textContent=(p.learned_dry_g!=null||p.learned_saturated_g!=null)
+      ? 'Learned thresholds in use'
+      : 'Experimental '+dryThreshold.toFixed(0)+'–'+wetThreshold.toFixed(0)+' g';
+  }
+
+  if(profile){
+    $('#evidence-next').textContent=cycles<1
+      ? 'Capture the first validated full cycle'
+      : 'Repeat the cycle and compare thresholds';
+  }
 
   const rangeButtons=[...document.querySelectorAll('.range-pills button')];
   const hoursFor={'24h':24,'7d':168,'30d':720};
