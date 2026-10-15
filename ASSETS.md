@@ -50,9 +50,9 @@ Approved first-set binaries are now stored under `assets/plants/` and the runtim
 
 | Asset | File | Use |
 | --- | --- | --- |
-| VyTile product hero | `assets/hero/vytile-product-hero.png.png` | Mini/product presentation |
-| VyTile home hero | `assets/hero/vytile-home-hero.png.png` | Main public hero and Home product card |
-| VyTile balcony hero | `assets/hero/vytile-balcony-hero.png.png` | Balcony / larger-pot concept |
-| VyTile commercial hero | `assets/hero/vytile-commercial-hero.png.png` | Commercial rail concept |
+| VyTile product hero | `assets/hero/vytile-product-hero.png` | Mini/product presentation |
+| VyTile home hero | `assets/hero/vytile-home-hero.png` | Main public hero and Home product card |
+| VyTile balcony hero | `assets/hero/vytile-balcony-hero.png` | Balcony / larger-pot concept |
+| VyTile commercial hero | `assets/hero/vytile-commercial-hero.png` | Commercial rail concept |
 
 Commercial image is a visual target / concept, not yet final engineered hardware. Public copy must not imply that the final mechanical design is already production-ready.
