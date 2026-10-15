@@ -20,6 +20,7 @@ This file is the working implementation map for the current prototype. It distin
 - `Preview setup` opens onboarding
 - GitHub Pages deployment from `main`
 - Approved hero imagery is now wired into the main hero, VyTile range, and commercial section
+- Public app-preview cards now use Herbarium plant imagery
 
 ### Onboarding
 - `start.html`
@@ -47,6 +48,7 @@ This file is the working implementation map for the current prototype. It distin
 - Home is the default dashboard
 - Plant identity is loaded from the authenticated user's Supabase plant records
 - Responsive desktop and mobile navigation
+- App Herbarium navigation now consistently opens the dedicated Herbarium page
 - Summary / current plant card
 - Live 6-hour and 12-hour net weight change from Supabase readings, anchored to the latest actual device reading and suppressed when the requested window is not covered
 - Live latest weight and temperature for claimed devices
@@ -101,8 +103,8 @@ These elements look functional but currently use demo or placeholder behaviour:
 - Product `Get VyTile` / purchase path — no commerce yet
 
 ### App
-- Desktop `Plants`, `Herbarium`, and `Settings` currently jump to sections on Home rather than dedicated pages
-- Mobile nav does the same
+- `Plants` still points to the single-plant detail route until the dedicated collection page is built
+- `Settings` still points to the Home settings section until a dedicated settings page is built
 - `See what Sykerbos is learning →` — placeholder
 - `Browse Herbarium →` — placeholder
 - `Device settings` — visual button only
