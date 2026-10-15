@@ -73,6 +73,30 @@ function showDryDown(selector,slope){
   el.textContent=slope<0?Math.abs(slope).toFixed(1)+' g/day':'+'+slope.toFixed(1)+' g/day';
 }
 
+function behaviorProfile(plant){
+  const hay=[plant?.common_name,plant?.botanical_name,plant?.nickname].filter(Boolean).join(' ').toLowerCase();
+  if(hay.includes('orange')||hay.includes('citrus')){
+    return {
+      label:'Experimental orange dry-down profile',
+      expectedStages:[14,8,6,3],
+      reserveTriggerG:18,
+      reserveTriggerDays:3,
+      preferredBand:null
+    };
+  }
+  return null;
+}
+
+function forecastFromRate(rate,profile){
+  if(!Number.isFinite(rate)||!profile) return null;
+  const use=Math.abs(rate);
+  if(use>=11) return {days:'3+ days',stage:'High-use phase',next:'Expected to slow toward ~8 g/day before the three-day reserve window.'};
+  if(use>=7) return {days:'~3 days',stage:'Three-day window',next:'Experimental trigger zone: about 18 g usable reserve before the 8 → 6 → 3 g/day decline.'};
+  if(use>=5) return {days:'~2 days',stage:'Lower reserve',next:'Expected dry-down is moving toward ~6 g/day, then ~3 g/day.'};
+  if(use>=2.5) return {days:'~1 day',stage:'Near end of reserve',next:'A ~3 g/day rate has marked the final low-reserve stage in the orange experiments.'};
+  return {days:'<1 day',stage:'Low-use stall',next:'Water use is near the experimental stall region; irrigation should be considered if no recent watering event explains the change.'};
+}
+
 function drawChart(readings){
   const host=$('#plant-chart');
   const pts=readings.filter(r=>Number.isFinite(Number(r.weight_g))&&stampOf(r)).sort((a,b)=>timeOf(a)-timeOf(b));
@@ -87,7 +111,7 @@ function drawChart(readings){
     <line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" class="plant-grid-line"/>
     <path d="${path}" class="plant-live-line"/>
   </svg><span class="plant-y top">${max.toFixed(0)} g</span><span class="plant-y bottom">${min.toFixed(0)} g</span>`;
-  $('#range-net-change').textContent=(vals.at(-1)-vals[0]>=0?'+':'')+(vals.at(-1)-vals[0]).toFixed(1)+' g';
+  host.dataset.netChange=(vals.at(-1)-vals[0]).toFixed(1);
 }
 
 function recentEvents(readings){
@@ -128,10 +152,31 @@ async function loadRange(deviceId,hours,runId=null){
   const newest=readings.at(-1)||anchor;
   const six=readingNear(readings,6,newest);
   const twelve=readingNear(readings,12,newest);
-  const sixSlope=slopePerDay(windowReadings(readings,6,newest));
-  const twelveSlope=slopePerDay(windowReadings(readings,12,newest));
-  showDryDown('#plant-6h-change',six&&sixSlope!==null?sixSlope:null);
-  showDryDown('#plant-12h-change',twelve&&twelveSlope!==null?twelveSlope:null);
+  const sixWindow=windowReadings(readings,6,newest);
+  const twelveWindow=windowReadings(readings,12,newest);
+  const sixSlope=slopePerDay(sixWindow);
+  const twelveSlope=slopePerDay(twelveWindow);
+  const currentRate=(twelve&&Number.isFinite(twelveSlope))?twelveSlope:
+    (six&&Number.isFinite(sixSlope)?sixSlope:null);
+  const movement=twelve?delta(twelve,newest):(six?delta(six,newest):null);
+
+  showDryDown('#plant-current-rate',currentRate);
+  $('#plant-current-rate-note').textContent=Number.isFinite(currentRate)
+    ? ((Math.abs(currentRate)<=3.5)?'Low-use / possible reserve-end signal':'Smoothed from recent active-run readings')
+    : 'Not enough continuous data';
+
+  $('#plant-recent-movement').textContent=movement===null?'—':(movement>0?'+':'')+movement.toFixed(1)+' g';
+  $('#plant-recent-movement-note').textContent=twelve?'Net movement over 12 h':six?'Net movement over 6 h':'Not enough continuous data';
+
+  const profile=window.__plantBehaviorProfile||null;
+  const forecast=forecastFromRate(currentRate,profile);
+  $('#plant-projected-days').textContent=forecast?.days||'Learning';
+  $('#plant-projected-note').textContent=forecast?forecast.stage:'More dry-down cycles needed';
+
+  if(forecast&&profile){
+    $('#plant-action-title').textContent=forecast.stage+'.';
+    $('#plant-action-copy').textContent=forecast.next;
+  }
 }
 
 async function init(){
@@ -150,6 +195,8 @@ async function init(){
   }
   const p=rows[0];
   const asset=plantAssetFor(p);
+  const profile=behaviorProfile(p);
+  window.__plantBehaviorProfile=profile;
   document.title=plantName(p)+' — Sykerbos';
   $('#plant-title').textContent=plantName(p);
   $('#plant-species').textContent=species(p)||'Your plant';
@@ -222,25 +269,34 @@ async function init(){
   }
   const current=Number(latest?.weight_g);
   if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
-    const percent=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
+    const recentPosition=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
     const gauge=$('#radial-gauge');
-    gauge.style.setProperty('--level',percent.toFixed(1));
-    gauge.style.setProperty('--angle',(percent*3.6).toFixed(1)+'deg');
-    $('#range-percent').textContent=Math.round(percent)+'%';
+    gauge.style.setProperty('--level',recentPosition.toFixed(1));
+    gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
     $('#range-low-side').textContent=low.toFixed(1)+' g';
     $('#range-high-side').textContent=high.toFixed(1)+' g';
 
-    const state=percent<15?'Very dry relative to recent range':
-      percent<35?'Dry side of recent range':
-      percent<75?'Mid-range moisture position':
-      'Near the wet end of recent range';
-    $('#plant-action-title').textContent=state+'.';
-    $('#plant-action-copy').textContent=`Current weight is ${Math.round(percent)}% through the recent 72-reading range (${recentRangeRows.length} readings). Orange/yellow marks the dry end, green the middle zone, and dark blue the saturated end. This is descriptive, not yet a watering recommendation.`;
+    // Reserve % must be tied to learned dry/saturated thresholds, not a rolling recent min/max.
+    $('#range-percent').textContent='Learning';
+    $('#range-percent').classList.add('learning-reserve');
+
+    if(profile?.preferredBand){
+      gauge.style.setProperty('--pref-start',profile.preferredBand[0]);
+      gauge.style.setProperty('--pref-size',profile.preferredBand[1]-profile.preferredBand[0]);
+      $('#preferred-band-label').textContent=`Preferred range · ${profile.preferredBand[0]}–${profile.preferredBand[1]}% reserve`;
+    }else{
+      gauge.style.setProperty('--pref-size',0);
+      $('#preferred-band-label').textContent=profile
+        ? 'Preferred range · research + plant learning pending'
+        : 'Preferred range · learning';
+    }
   }
 
   const count=Number(runSummary?.reading_count||summary?.reading_count||0);
   $('#plant-intelligence-title').textContent='Learning '+plantName(p)+'.';
-  $('#plant-intelligence-copy').textContent=`Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''} from ${device.device_code}. Historical runs remain stored separately for comparison.`;
+  $('#plant-intelligence-copy').textContent=profile
+    ? `Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''}. The current Valencia-orange model treats the observed 14 → 8 → 6 → 3 g/day decline as experimental expected behaviour and uses ~18 g remaining as a provisional three-day reserve trigger. New cycles will refine that curve.`
+    : `Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''} from ${device.device_code}. Historical runs remain stored separately for comparison.`;
   $('#plant-learning-bar').style.width=Math.min(100,Math.round(count/20))+'%';
   $('#plant-learning-note').textContent=count.toLocaleString()+' recorded readings';
 
