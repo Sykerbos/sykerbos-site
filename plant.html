@@ -113,11 +113,66 @@
           <small id="plant-learning-note">Loading history…</small>
         </article>
 
-        <div class="insight-grid">
-          <article class="panel"><span>01</span><h3>Dry-down pattern</h3><p>Currently steady. More cycles are needed before Sykerbos sets a normal range.</p></article>
-          <article class="panel"><span>02</span><h3>Irrigation response</h3><p>One future goal is to compare how quickly the plant responds after watering.</p></article>
-          <article class="panel"><span>03</span><h3>Temperature context</h3><p>Current readings will be compared with water loss so warmer and cooler days make sense.</p></article>
-          <article class="panel"><span>04</span><h3>Prediction</h3><p>Not enough evidence yet. Sykerbos will avoid pretending certainty before the baseline exists.</p></article>
+        <div class="intelligence-dashboard">
+          <article class="panel intelligence-visual-card">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Expected behaviour</p><h3>Dry-down signature</h3></div>
+              <span class="evidence-pill">Experimental</span>
+            </div>
+            <div class="slope-visual" id="slope-visual" aria-label="Expected dry-down stages">
+              <div class="slope-stage"><strong>14</strong><span>High use</span></div>
+              <div class="slope-arrow">→</div>
+              <div class="slope-stage"><strong>8</strong><span>Declining</span></div>
+              <div class="slope-arrow">→</div>
+              <div class="slope-stage"><strong>6</strong><span>Lower reserve</span></div>
+              <div class="slope-arrow">→</div>
+              <div class="slope-stage"><strong>3</strong><span>Reserve end</span></div>
+            </div>
+            <div class="current-slope-line"><span>Current measured rate</span><strong id="intelligence-current-rate">—</strong></div>
+            <p class="panel-note">g/day · provisional Valencia-orange pattern from early Sykerbos experiments.</p>
+          </article>
+
+          <article class="panel confidence-card">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Learning confidence</p><h3 id="confidence-title">Early evidence</h3></div>
+              <strong class="confidence-number" id="confidence-number">—</strong>
+            </div>
+            <div class="confidence-track"><span id="confidence-track-bar" style="width:0%"></span></div>
+            <div class="confidence-steps" id="confidence-steps">
+              <span>1 cycle</span><span>3 cycles</span><span>5 cycles</span><span>8+ cycles</span>
+            </div>
+            <p id="confidence-copy">Confidence rises as repeatable irrigation and dry-down cycles agree with one another.</p>
+          </article>
+
+          <article class="panel reserve-map-card">
+            <p class="eyebrow">Reserve model</p>
+            <h3>From saturation to dry threshold</h3>
+            <div class="reserve-map">
+              <div class="reserve-track">
+                <span class="reserve-marker wet" id="reserve-wet-marker"></span>
+                <span class="reserve-marker trigger" id="reserve-trigger-marker"></span>
+                <span class="reserve-marker current" id="reserve-current-marker"></span>
+                <span class="reserve-marker dry" id="reserve-dry-marker"></span>
+              </div>
+              <div class="reserve-labels">
+                <span><strong id="intel-wet">—</strong><small>Saturated</small></span>
+                <span><strong id="intel-trigger">—</strong><small>~3-day trigger</small></span>
+                <span><strong id="intel-current">—</strong><small>Current</small></span>
+                <span><strong id="intel-dry">—</strong><small>Dry threshold</small></span>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel evidence-card">
+            <p class="eyebrow">What Sykerbos knows so far</p>
+            <h3>Evidence, not instructions.</h3>
+            <div class="evidence-list">
+              <div><span>Observed signal</span><strong id="evidence-slope">Dry-down curve learning</strong></div>
+              <div><span>Reserve model</span><strong id="evidence-reserve">Thresholds learning</strong></div>
+              <div><span>Repeatability</span><strong id="evidence-cycles">0 validated cycles</strong></div>
+              <div><span>Next question</span><strong id="evidence-next">Repeat the cycle and compare</strong></div>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -143,6 +198,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261014-4"></script>
+  <script type="module" src="plant.js?v=20261014-5"></script>
 </body>
 </html>
