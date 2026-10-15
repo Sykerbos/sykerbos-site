@@ -168,6 +168,18 @@ async function init(){
     supabase.from('device_reading_summary').select('*').eq('device_id',device.id).limit(1)
   ]);
   const latest=latestRows?.[0]||null, summary=summaryRows?.[0]||null;
+  let recentRangeRows=[];
+  if(latest){
+    let recentRangeQuery=supabase.from('readings')
+      .select('weight_g,measured_at,created_at,run_id')
+      .eq('device_id',device.id)
+      .order('measured_at',{ascending:false,nullsFirst:false})
+      .order('created_at',{ascending:false})
+      .limit(72);
+    if(latest.run_id) recentRangeQuery=recentRangeQuery.eq('run_id',latest.run_id);
+    const {data:recentRows}=await recentRangeQuery;
+    recentRangeRows=recentRows||[];
+  }
   let runSummary=null;
   if(latest?.run_id){
     const {data:runRows}=await supabase.from('device_run_summary')
@@ -191,14 +203,39 @@ async function init(){
     $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
   }
 
-  const low=Number(summary?.p05_weight_g), high=Number(summary?.p95_weight_g), current=Number(latest?.weight_g);
+  const recentWeights=recentRangeRows
+    .map(r=>Number(r.weight_g))
+    .filter(Number.isFinite)
+    .sort((a,b)=>a-b);
+  let low=null,high=null;
+  if(recentWeights.length>=8){
+    const pct=q=>{
+      const i=(recentWeights.length-1)*q;
+      const lo=Math.floor(i),hi=Math.ceil(i),f=i-lo;
+      return recentWeights[lo]*(1-f)+recentWeights[hi]*f;
+    };
+    low=pct(.05);
+    high=pct(.95);
+  }else if(recentWeights.length){
+    low=recentWeights[0];
+    high=recentWeights.at(-1);
+  }
+  const current=Number(latest?.weight_g);
   if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
     const percent=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
-    $('#radial-gauge').style.setProperty('--level',percent.toFixed(1));
+    const gauge=$('#radial-gauge');
+    gauge.style.setProperty('--level',percent.toFixed(1));
+    gauge.style.setProperty('--angle',(percent*3.6).toFixed(1)+'deg');
     $('#range-percent').textContent=Math.round(percent)+'%';
-    $('#range-low-side').textContent=low.toFixed(0)+' g'; $('#range-high-side').textContent=high.toFixed(0)+' g';
-    $('#plant-action-title').textContent=percent<20?'Near the dry end of its observed range.':percent>80?'Near the wet end of its observed range.':'Inside its observed range.';
-    $('#plant-action-copy').textContent=`Current weight is ${Math.round(percent)}% of the way from the lowest to highest recorded weight. This is descriptive, not yet a watering recommendation.`;
+    $('#range-low-side').textContent=low.toFixed(1)+' g';
+    $('#range-high-side').textContent=high.toFixed(1)+' g';
+
+    const state=percent<15?'Very dry relative to recent range':
+      percent<35?'Dry side of recent range':
+      percent<75?'Mid-range moisture position':
+      'Near the wet end of recent range';
+    $('#plant-action-title').textContent=state+'.';
+    $('#plant-action-copy').textContent=`Current weight is ${Math.round(percent)}% through the recent 72-reading range (${recentRangeRows.length} readings). Orange/yellow marks the dry end, green the middle zone, and dark blue the saturated end. This is descriptive, not yet a watering recommendation.`;
   }
 
   const count=Number(runSummary?.reading_count||summary?.reading_count||0);
