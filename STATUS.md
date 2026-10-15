@@ -70,6 +70,7 @@ This file is the working implementation map for the current prototype. It distin
 - Existing Alpha readings backfilled to registered devices
 - Dedicated plant detail page now loads the selected Supabase plant, real telemetry history, observed range and Herbarium asset
 - Plant detail page now filters chart data to the active run and shows a single current-use dry-down rate, recent movement, and projected reserve window
+- Intelligence tab now visualizes the experimental dry-down signature, reserve thresholds/current position, evidence summary, and cycle-based confidence growth
 - Valencia-orange prototype model treats the observed 14 → 8 → 6 → 3 g/day decline as experimental expected behaviour and exposes the ~18 g / ~3-day reserve trigger as provisional logic
 - Pot B provisional plant-specific thresholds are seeded at ~525 g dry and ~720 g saturated so reserve can be interpreted while future cycles refine those values
 - Water-reserve percentage is withheld until stable dry/saturated thresholds are learned; the 72-reading band remains a recent reference only
