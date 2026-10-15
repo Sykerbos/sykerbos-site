@@ -87,9 +87,22 @@ function behaviorProfile(plant){
   return null;
 }
 
-function forecastFromRate(rate,profile){
-  if(!Number.isFinite(rate)||!profile) return null;
-  const use=Math.abs(rate);
+function forecastFromRate(rate,profile,reserveG=null){
+  if(!profile) return null;
+  const use=Number.isFinite(rate)?Math.abs(rate):null;
+
+  if(Number.isFinite(reserveG)){
+    if(reserveG<=0) return {days:'At dry threshold',stage:'Reserve depleted',next:'Current mass is at or below the provisional dry threshold.'};
+    if(reserveG<=3) return {days:'<1 day',stage:'Final reserve',next:'Only a few grams remain above the provisional dry threshold; the orange experiments approached the ~3 g/day stall region here.'};
+    if(reserveG<=9) return {days:'~1–2 days',stage:'Lower reserve',next:'Reserve is inside the experimental 6 → 3 g/day end-stage window.'};
+    if(reserveG<=18) return {days:'~3 days',stage:'Three-day reserve window',next:'Reserve has entered the provisional ~18 g trigger window associated with the 8 → 6 → 3 g/day decline.'};
+
+    const baseRate=Math.max(8,use||8);
+    const extraDays=(reserveG-18)/baseRate;
+    return {days:'~'+Math.max(3,Math.round((3+extraDays)*10)/10)+' days',stage:'Reserve available',next:'Projection includes the expected slowdown toward the 8 → 6 → 3 g/day end-stage pattern rather than extending the current rate indefinitely.'};
+  }
+
+  if(!Number.isFinite(use)) return null;
   if(use>=11) return {days:'3+ days',stage:'High-use phase',next:'Expected to slow toward ~8 g/day before the three-day reserve window.'};
   if(use>=7) return {days:'~3 days',stage:'Three-day window',next:'Experimental trigger zone: about 18 g usable reserve before the 8 → 6 → 3 g/day decline.'};
   if(use>=5) return {days:'~2 days',stage:'Lower reserve',next:'Expected dry-down is moving toward ~6 g/day, then ~3 g/day.'};
@@ -169,9 +182,11 @@ async function loadRange(deviceId,hours,runId=null){
   $('#plant-recent-movement-note').textContent=twelve?'Net movement over 12 h':six?'Net movement over 6 h':'Not enough continuous data';
 
   const profile=window.__plantBehaviorProfile||null;
-  const forecast=forecastFromRate(currentRate,profile);
+  const forecast=forecastFromRate(currentRate,profile,window.__plantReserveG);
   $('#plant-projected-days').textContent=forecast?.days||'Learning';
-  $('#plant-projected-note').textContent=forecast?forecast.stage:'More dry-down cycles needed';
+  $('#plant-projected-note').textContent=forecast
+    ? (Number.isFinite(window.__plantReserveG)?`${window.__plantReserveG.toFixed(1)} g reserve · ${forecast.stage}`:forecast.stage)
+    : 'More dry-down cycles needed';
 
   if(forecast&&profile){
     $('#plant-action-title').textContent=forecast.stage+'.';
@@ -268,17 +283,30 @@ async function init(){
     high=recentWeights.at(-1);
   }
   const current=Number(latest?.weight_g);
+  let reserveG=null,reservePercent=null;
   if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
-    const recentPosition=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
-    const gauge=$('#radial-gauge');
-    gauge.style.setProperty('--level',recentPosition.toFixed(1));
-    gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
     $('#range-low-side').textContent=low.toFixed(1)+' g';
     $('#range-high-side').textContent=high.toFixed(1)+' g';
 
-    // Reserve % must be tied to learned dry/saturated thresholds, not a rolling recent min/max.
-    $('#range-percent').textContent='Learning';
-    $('#range-percent').classList.add('learning-reserve');
+    const dryThreshold=Number(p.learned_dry_g??p.provisional_dry_g);
+    const wetThreshold=Number(p.learned_saturated_g??p.provisional_saturated_g);
+    const gauge=$('#radial-gauge');
+
+    if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
+      reserveG=Math.max(0,current-dryThreshold);
+      reservePercent=Math.max(0,Math.min(100,(reserveG/(wetThreshold-dryThreshold))*100));
+      gauge.style.setProperty('--level',reservePercent.toFixed(1));
+      gauge.style.setProperty('--angle',(reservePercent*3.6).toFixed(1)+'deg');
+      $('#range-percent').textContent=Math.round(reservePercent)+'%';
+      $('#range-percent').classList.remove('learning-reserve');
+      $('#range-explanation').textContent=`Reserve uses ${p.learned_dry_g!=null?'learned':'experimental'} dry/saturated thresholds (${dryThreshold.toFixed(0)}–${wetThreshold.toFixed(0)} g). The recent 72-reading band below remains a short-term reference only.`;
+    }else{
+      const recentPosition=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
+      gauge.style.setProperty('--level',recentPosition.toFixed(1));
+      gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
+      $('#range-percent').textContent='Learning';
+      $('#range-percent').classList.add('learning-reserve');
+    }
 
     if(profile?.preferredBand){
       gauge.style.setProperty('--pref-start',profile.preferredBand[0]);
@@ -291,6 +319,9 @@ async function init(){
         : 'Preferred range · learning';
     }
   }
+
+  window.__plantReserveG=reserveG;
+  window.__plantReservePercent=reservePercent;
 
   const count=Number(runSummary?.reading_count||summary?.reading_count||0);
   $('#plant-intelligence-title').textContent='Learning '+plantName(p)+'.';
