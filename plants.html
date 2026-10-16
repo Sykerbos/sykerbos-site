@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Your plants — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="plants.css">
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <a class="brand brand-image-link" href="index.html" aria-label="Sykerbos"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
+    <nav class="app-nav" aria-label="App">
+      <a href="app.html">Home</a>
+      <a class="active" href="plants.html">Plants</a>
+      <a href="herbarium.html">Herbarium</a>
+      <a href="app.html#settings">Settings</a>
+    </nav>
+    <button class="profile-button" type="button" aria-label="Profile">DD</button>
+  </header>
+  <main class="plants-shell">
+    <section class="plants-intro">
+      <div>
+        <p class="eyebrow">Your collection</p>
+        <h1>Growing now.</h1>
+        <p class="lede">Each plant has its own live record, intelligence, Herbarium entry and growing history.</p>
+      </div>
+      <a class="button" href="start.html?new=1">+ Add plant + VyTile</a>
+    </section>
+    <section class="collection-summary" aria-label="Collection summary">
+      <article><small>Plants</small><strong id="collection-count">—</strong><span>in your collection</span></article>
+      <article><small>Reporting now</small><strong id="online-count">—</strong><span>active VyTiles</span></article>
+      <article><small>Needs attention</small><strong id="attention-count">—</strong><span>offline or stale</span></article>
+      <article><small>Fastest mover</small><strong id="fastest-mover">—</strong><span id="fastest-mover-note">learning today</span></article>
+    </section>
+    <section class="section-block">
+      <div class="section-title-row">
+        <div><p class="eyebrow">Plants</p><h2>Explore each plant</h2></div>
+        <a class="text-link" href="plant-setup.html">Edit assignments</a>
+      </div>
+      <div class="plants-collection-grid" id="plants-collection-grid">
+        <article class="collection-loading">Loading your collection…</article>
+      </div>
+    </section>
+  </main>
+  <nav class="mobile-nav" aria-label="Mobile app navigation">
+    <a href="app.html"><span>⌂</span>Home</a>
+    <a class="active" href="plants.html"><span>♧</span>Plants</a>
+    <a href="herbarium.html"><span>▦</span>Herbarium</a>
+    <a href="app.html#settings"><span>⚙</span>Settings</a>
+  </nav>
+  <script type="module" src="plants.js?v=20261015-1"></script>
+</body>
+</html>
