@@ -79,3 +79,34 @@
   .reserve-labels{grid-template-columns:1fr 1fr}
   .reserve-labels span,.reserve-labels span:nth-child(2),.reserve-labels span:nth-child(3),.reserve-labels span:last-child{text-align:left}
 }
+
+/* Reserve map direction/data fix — 2026-10-15 */
+.reserve-track{
+  background:linear-gradient(90deg,#123f6a 0%,#2f7f5f 30%,#79a85a 52%,#e9b949 78%,#d96f32 100%);
+}
+.reserve-labels{
+  position:relative;
+  display:block;
+  height:78px;
+  margin:0 10px;
+}
+.reserve-label{
+  position:absolute;
+  top:0;
+  display:grid;
+  gap:2px;
+  width:112px;
+  transform:translateX(-50%);
+  text-align:center;
+}
+.reserve-label.wet-label{transform:none;text-align:left}
+.reserve-label.dry-label{transform:translateX(-100%);text-align:right}
+.reserve-label.trigger-label{top:36px}
+.reserve-label.current-label{top:0}
+.reserve-label strong{font-size:.96rem}
+.reserve-label small{color:var(--muted);font-size:.7rem}
+@media(max-width:560px){
+  .reserve-labels{height:104px}
+  .reserve-label{width:92px;font-size:.9rem}
+  .reserve-label.trigger-label{top:48px}
+}
