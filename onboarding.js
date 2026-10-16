@@ -32,6 +32,7 @@ function render(push=true){
   back.style.visibility=index===0?'hidden':'visible';
   next.textContent=index===0?'Get started →':index===slides.length-1?'Finish setup →':'Continue →';
   localStorage.setItem('sykerbosOnboardingStep',String(index));
+  if(push) window.scrollTo({top:0,behavior:'instant'});
   if(push) history.pushState({setupStep:index},'',`#step-${index+1}`);
 }
 
