@@ -10,6 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="water-reserve.css?v=1">
 </head>
 <body class="app-body">
   <header class="app-header">
@@ -39,11 +40,15 @@
         <span class="status learning" id="primary-status">Loading</span>
         <p class="eyebrow" id="primary-species">Your main plant</p>
         <h2 id="primary-plant-name">Loading your plant…</h2>
+        <p id="primary-next-action" class="primary-next-action">Building your plant’s picture…</p>
         <p id="primary-summary">Reading your VyTile history from Sykerbos.</p>
       </div>
       <div class="attention-reading">
+        <div id="primary-water-reserve"></div>
+        <div class="reading-secondary">
         <strong id="live-weight">—</strong>
         <span id="live-reading-label">Current weight</span>
+        </div>
       </div>
     </section>
 
@@ -115,6 +120,6 @@
     <a href="#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="app.js?v=20261014-1"></script>
+  <script type="module" src="app.js?v=20261016-reserve"></script>
 </body>
 </html>

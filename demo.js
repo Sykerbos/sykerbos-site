@@ -1,4 +1,5 @@
 import { plantAssetFor } from './plant-assets.js';
+import { reserveState, reserveMarkup } from './water-reserve.js?v=1';
 
 // Fixed, fictional examples. The guest preview makes no Auth or Data API calls.
 const plants = [
@@ -41,10 +42,12 @@ function chart(p, days = 7) {
     <text x="718" y="225" font-size="12" fill="currentColor">Now</text>
   </svg>`;
 }
+function demoReserve(p){return reserveState({weight:p.weight,dry:p.dry,wet:p.wet,learning:p.status==='Learning'});}
 function card(p) {
+  const state=demoReserve(p);
   return `<a class="plant-collection-card" href="${detailUrl(p)}">
     <img class="demo-photo" src="${photo(p)}" alt="${p.common_name}">
-    <div class="plant-collection-copy"><span class="status ${p.id === 'orange' ? 'learning' : 'good'}">${p.status} · sample</span><h3>${p.nickname}</h3><p><em>${p.botanical_name}</em></p><div class="mini-reading"><strong>${p.weight.toFixed(1)} g</strong><span>${p.temperature.toFixed(1)} °C</span></div><small>Explore sample plant →</small></div>
+    <div class="plant-collection-copy"><h3>${p.nickname}</h3><p><em>${p.botanical_name}</em></p>${reserveMarkup(state,{sample:true})}<p class="card-next-action">${state.action}</p><small class="card-freshness">Sample snapshot · not live</small><div class="mini-reading"><strong>${p.weight.toFixed(1)} g</strong><span>${p.temperature.toFixed(1)} °C</span></div><small>Explore sample plant →</small></div>
   </a>`;
 }
 function metrics(p) {
@@ -56,16 +59,17 @@ function metrics(p) {
   </section>`;
 }
 function primary(p, link = false) {
-  const content = `<section class="attention-card live-primary-card"><img class="primary-herbarium-image has-image" src="${photo(p)}" alt="${p.common_name}" style="object-fit:cover"><div class="primary-copy"><span class="status learning">${p.status} · sample</span><p class="eyebrow">${p.botanical_name}</p><h2>${p.nickname}</h2><p>${p.note}</p>${link ? '<p class="text-link">Explore this plant →</p>' : ''}</div><div class="attention-reading"><strong>${p.weight.toFixed(1)} g</strong><span>Simulated weight</span></div></section>`;
+  const state=demoReserve(p);
+  const content = `<section class="attention-card live-primary-card"><img class="primary-herbarium-image has-image" src="${photo(p)}" alt="${p.common_name}" style="object-fit:cover"><div class="primary-copy"><p class="eyebrow">${p.botanical_name}</p><h2>${p.nickname}</h2><p class="primary-next-action">${state.action}</p><p>${p.note}</p>${link ? '<p class="text-link">Explore this plant →</p>' : ''}</div><div class="attention-reading reserve-primary">${reserveMarkup(state,{sample:true})}<span class="primary-weight">${p.weight.toFixed(1)} g · Sample snapshot, not live</span></div></section>`;
   return link ? `<a class="demo-overview-link" href="${detailUrl(p)}">${content}</a>` : content;
 }
 function renderHome() {
   const p = plants[0];
   host.innerHTML = `<section class="welcome-row"><div><p class="eyebrow">Explore Sykerbos</p><h1>A little garden to explore.</h1><p class="lede">See how continuous plant sensing could look, using three sample plants.</p></div><a class="button" href="demo.html?view=plants">Meet the sample plants →</a></section>
-    ${primary(p, true)}${metrics(p)}
+    ${primary(p, true)}
     <section class="home-grid"><article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Kitchen Basil · sample</p><h2>Weight trend</h2></div><span>7 days</span></div>${chart(p)}<p class="panel-note">Simulated readings: the upward step illustrates watering; the falling curve illustrates dry-down.</p></article>
     <article class="panel intelligence-panel"><p class="eyebrow">Understanding the pattern</p><h2>Each plant has a rhythm.</h2><p>Weight rises when water is added and falls as water leaves the pot. Repeated cycles help Sykerbos learn that plant’s behaviour.</p><p class="demo-note">This preview illustrates the experience. These plants, readings and interpretations are examples.</p><a class="text-link" href="${detailUrl(p)}">Explore the sample evidence →</a></article></section>
-    <section class="section-block"><div class="section-title-row"><div><p class="eyebrow">Sample collection</p><h2>Growing now</h2></div><a class="text-link" href="demo.html?view=plants">View all sample plants →</a></div><div class="plant-grid-live">${plants.map(card).join('')}</div></section>
+    <section class="section-block"><div class="section-title-row"><div><p class="eyebrow">Sample collection</p><h2>Growing now</h2></div><a class="text-link" href="demo.html?view=plants">View all sample plants →</a></div><div class="plant-grid-live">${plants.map(card).join('')}</div><p class="reserve-footnote">Rings illustrate estimated water reserve between each pot’s own wet and dry weight references, rather than measured soil moisture. Values and actions here are simulated.</p></section>
     <section class="section-block panel settings-tease" id="settings"><div><p class="eyebrow">Keep exploring</p><h2>Meet the plants behind the data.</h2><p>Discover their habitats, history and water strategies.</p></div><a class="button" href="herbarium.html?demo=1">Browse Herbarium →</a></section>`;
 }
 function renderPlants() {

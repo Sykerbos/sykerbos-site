@@ -1,5 +1,6 @@
 import { supabase } from './supabase-client.js';
 import { plantAssetFor } from './plant-assets.js';
+import { reserveState, reserveMarkup } from './water-reserve.js?v=1';
 
 const $=selector=>document.querySelector(selector);
 const fmt=(value,digits=1)=>{
@@ -108,6 +109,15 @@ function buildChart(readings){
     <span class="chart-label end">Now</span>`;
 }
 
+function plantReserve(p){
+  const stamp=stampOf(p.latest);
+  const age=stamp?Date.now()-new Date(stamp).getTime():Infinity;
+  const fresh=Number.isFinite(age)&&age>=-60000&&age<90*60000;
+  const valid=v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v));
+  const learned=valid(p.learned_dry_g)&&valid(p.learned_saturated_g)&&Number(p.learned_saturated_g)>Number(p.learned_dry_g);
+  return reserveState({weight:p.latest?.weight_g,dry:learned?p.learned_dry_g:p.provisional_dry_g,wet:learned?p.learned_saturated_g:p.provisional_saturated_g,fresh,maintenance:p.status==='offline'||p.device?.status==='maintenance',provisional:!learned});
+}
+
 function renderPlantCards(plants){
   const host=$('#plant-list');
   if(!host) return;
@@ -129,6 +139,7 @@ function renderPlantCards(plants){
     const bg=image?`style="background-image:url('${image.image}');background-position:${'center'}"`:'';
     const cls=image?'plant-thumb herbarium-thumb has-image':'plant-thumb herbarium-thumb';
     const fallback=!image?(p.common_name||p.nickname||'P').slice(0,1).toUpperCase():'';
+    const reserve=plantReserve(p);
     const stateLabel=maintenance?'Maintenance':fresh?'Connected':'Last seen '+age;
     const stateClass=maintenance?'offline':fresh?'good':'learning';
     return `<a class="plant-collection-card ${maintenance?'offline-card':''}" href="plant.html?plant=${encodeURIComponent(p.id)}" data-plant-id="${p.id}">
@@ -137,6 +148,9 @@ function renderPlantCards(plants){
         <span class="status ${stateClass}">${stateLabel}</span>
         <h3>${plantLabel(p)}</h3>
         <p>${speciesLabel(p)||p.device?.device_code||'Plant'}</p>
+        ${reserveMarkup(reserve)}
+        <p class="card-next-action">${reserve.action}</p>
+        <small class="card-freshness">${stampOf(r)?'Updated '+age:'No readings yet'}</small>
         <div class="mini-reading"><strong>${fmt(r?.weight_g)} g</strong><span>${fmt(r?.temperature_c)} °C</span></div>
         <small>${p.device?.device_code||''} · ${maintenance?'Electronics rebuild pending':Number(p.reading_count||0).toLocaleString()+' current-run readings'}</small>
       </div>
@@ -154,7 +168,7 @@ function renderPlantCards(plants){
 async function loadPlantData(user){
   const {data:plants,error}=await supabase
     .from('plants')
-    .select('id,device_id,nickname,common_name,botanical_name,status,is_primary,display_order')
+    .select('id,device_id,nickname,common_name,botanical_name,status,is_primary,display_order,learned_dry_g,learned_saturated_g,provisional_dry_g,provisional_saturated_g')
     .eq('user_id',user.id)
     .order('is_primary',{ascending:false})
     .order('display_order',{ascending:true});
@@ -200,6 +214,9 @@ async function loadPlantData(user){
   $('#primary-species').textContent=speciesLabel(primary)||primary.device?.device_code||'Your main plant';
   setImage($('#primary-herbarium-image'),primary);
 
+  const reserve=plantReserve(primary);
+  $('#primary-water-reserve').innerHTML=reserveMarkup(reserve);
+  $('#primary-next-action').textContent=reserve.action;
   const latest=primary.latest;
   const latestStamp=stampOf(latest);
   const isFresh=latestStamp && (Date.now()-new Date(latestStamp).getTime()<90*60000);
