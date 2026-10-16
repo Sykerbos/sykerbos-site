@@ -1,0 +1,22 @@
+.plants-shell{width:min(1180px,calc(100% - 28px));margin:0 auto;padding:36px 0 96px}
+.plants-intro{display:flex;justify-content:space-between;gap:28px;align-items:flex-end;margin-bottom:24px}
+.plants-intro h1{font-size:clamp(3rem,6vw,5.5rem);margin:4px 0 14px}
+.collection-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:34px}
+.collection-summary article{background:white;border:1px solid var(--line);border-radius:20px;padding:18px}
+.collection-summary small,.collection-summary strong,.collection-summary span{display:block}
+.collection-summary small,.collection-summary span{color:var(--muted)}
+.collection-summary strong{font-family:"Libre Baskerville",serif;font-size:1.8rem;color:var(--ink);margin:3px 0}
+.plants-collection-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.plant-tile{display:grid;overflow:hidden;background:white;border:1px solid var(--line);border-radius:24px;box-shadow:0 12px 34px rgba(18,61,50,.06);transition:transform .2s ease,box-shadow .2s ease}
+.plant-tile:hover{transform:translateY(-3px);box-shadow:0 16px 42px rgba(18,61,50,.1)}
+.plant-tile-image{height:230px;background:#e8eee4;background-size:cover;background-position:center;position:relative}
+.plant-tile-image:not(.has-image):after{content:attr(data-fallback);position:absolute;inset:0;display:grid;place-items:center;font-family:"Libre Baskerville",serif;font-size:4rem;color:#718074}
+.plant-tile-body{padding:20px}.plant-tile-body h3{font-family:"Libre Baskerville",serif;font-size:1.55rem;color:var(--ink);margin:12px 0 4px}.plant-tile-body p{margin:0;color:var(--muted)}
+.tile-readings{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px}.tile-readings div{background:var(--sage);border-radius:14px;padding:10px}
+.tile-readings small,.tile-readings strong{display:block}.tile-readings small{color:var(--muted);font-size:.7rem}.tile-readings strong{color:var(--ink);margin-top:2px}
+.tile-device-row{display:flex;justify-content:space-between;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:.8rem}
+.primary-badge{display:inline-flex;margin-left:8px;padding:4px 7px;border-radius:999px;background:#e4efe5;color:#2f6843;font-size:.68rem;font-weight:700}
+.collection-loading,.add-plant-tile{min-height:260px;display:grid;place-items:center;text-align:center;background:white;border:1px dashed #bdc8bf;border-radius:24px;color:var(--muted);padding:24px}
+.add-plant-tile strong{font-family:"Libre Baskerville",serif;font-size:1.5rem;color:var(--ink)}
+@media(max-width:900px){.plants-collection-grid{grid-template-columns:repeat(2,1fr)}.collection-summary{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.plants-shell{width:min(100% - 20px,1180px);padding-top:20px}.plants-intro{align-items:flex-start;flex-direction:column}.plants-intro h1{font-size:3rem}.plants-collection-grid,.collection-summary{grid-template-columns:1fr}.plant-tile-image{height:210px}}
