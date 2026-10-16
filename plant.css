@@ -110,3 +110,36 @@
   .reserve-label{width:92px;font-size:.9rem}
   .reserve-label.trigger-label{top:48px}
 }
+
+/* Reserve label readability fix — 2026-10-15
+   Marker positions remain proportional on the bar; labels use four stable columns
+   so nearby current/trigger/dry values never collide. */
+.reserve-labels{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  height:auto;
+  margin:0;
+  align-items:start;
+}
+.reserve-label{
+  position:static;
+  width:auto;
+  transform:none !important;
+  text-align:center !important;
+  top:auto !important;
+}
+.reserve-label:first-child{text-align:left !important}
+.reserve-label:last-child{text-align:right !important}
+.reserve-label strong{display:block;white-space:nowrap}
+.reserve-label small{display:block;line-height:1.25}
+@media(max-width:560px){
+  .reserve-labels{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px 20px;
+    height:auto;
+  }
+  .reserve-label,
+  .reserve-label:first-child,
+  .reserve-label:last-child{text-align:left !important}
+}
