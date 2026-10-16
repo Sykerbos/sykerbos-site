@@ -20,6 +20,7 @@ This file is the working implementation map for the current prototype. It distin
 - `Preview setup` opens onboarding
 - GitHub Pages deployment from `main`
 - Approved hero imagery is now wired into the main hero, VyTile range, and commercial section
+- VyTile now has a dedicated brand-within-brand lockup in the product range section, reinforcing Sykerbos as ecosystem/master brand and VyTile as the physical sensing family
 - Public app-preview cards now use Herbarium plant imagery
 
 ### Onboarding
