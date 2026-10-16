@@ -5,6 +5,11 @@ const $=s=>document.querySelector(s);
 const fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
 const stampOf=r=>r?.measured_at||r?.created_at||null;
 const timeOf=r=>new Date(stampOf(r)||0).getTime();
+function numericOrNull(value){
+  if(value===null||value===undefined||value==='') return null;
+  const n=Number(value);
+  return Number.isFinite(n)?n:null;
+}
 
 const tabs=[...document.querySelectorAll('.plant-tabs button')];
 const panels=[...document.querySelectorAll('.plant-tab-panel')];
@@ -306,8 +311,8 @@ async function init(){
     $('#range-low-side').textContent=low.toFixed(1)+' g';
     $('#range-high-side').textContent=high.toFixed(1)+' g';
 
-    const dryThreshold=Number(p.learned_dry_g??p.provisional_dry_g);
-    const wetThreshold=Number(p.learned_saturated_g??p.provisional_saturated_g);
+    const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
+    const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
     const gauge=$('#radial-gauge');
 
     if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
@@ -359,8 +364,8 @@ async function init(){
     : 'No automatically validated cycles yet. The current model is experimental evidence; the first repeatable irrigation/dry-down cycle will start increasing confidence.';
   $('#evidence-cycles').textContent=cycles+' validated cycle'+(cycles===1?'':'s');
 
-  const dryThreshold=Number(p.learned_dry_g??p.provisional_dry_g);
-  const wetThreshold=Number(p.learned_saturated_g??p.provisional_saturated_g);
+  const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
+  const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
   const triggerG=profile&&Number.isFinite(dryThreshold)?dryThreshold+profile.reserveTriggerG:null;
   if(Number.isFinite(dryThreshold)) $('#intel-dry').textContent=dryThreshold.toFixed(0)+' g';
   if(Number.isFinite(wetThreshold)) $('#intel-wet').textContent=wetThreshold.toFixed(0)+' g';
@@ -368,11 +373,24 @@ async function init(){
   if(Number.isFinite(current)) $('#intel-current').textContent=current.toFixed(1)+' g';
 
   if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
-    const place=v=>Math.max(0,Math.min(100,((v-dryThreshold)/(wetThreshold-dryThreshold))*100));
-    $('#reserve-dry-marker').style.left='0%';
-    $('#reserve-wet-marker').style.left='100%';
-    if(Number.isFinite(triggerG)) $('#reserve-trigger-marker').style.left=place(triggerG)+'%';
-    if(Number.isFinite(current)) $('#reserve-current-marker').style.left=place(current)+'%';
+    // Reserve map reads left→right as wet/saturated → dry threshold.
+    const place=v=>Math.max(0,Math.min(100,((wetThreshold-v)/(wetThreshold-dryThreshold))*100));
+    $('#reserve-wet-marker').style.left='0%';
+    $('#reserve-dry-marker').style.left='100%';
+    $('#reserve-wet-label').style.left='0%';
+    $('#reserve-dry-label').style.left='100%';
+
+    if(Number.isFinite(triggerG)){
+      const triggerPos=place(triggerG);
+      $('#reserve-trigger-marker').style.left=triggerPos+'%';
+      $('#reserve-trigger-label').style.left=triggerPos+'%';
+    }
+    if(Number.isFinite(current)){
+      const currentPos=place(current);
+      $('#reserve-current-marker').style.left=currentPos+'%';
+      $('#reserve-current-label').style.left=currentPos+'%';
+    }
+
     $('#evidence-reserve').textContent=(p.learned_dry_g!=null||p.learned_saturated_g!=null)
       ? 'Learned thresholds in use'
       : 'Experimental '+dryThreshold.toFixed(0)+'–'+wetThreshold.toFixed(0)+' g';
