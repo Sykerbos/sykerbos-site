@@ -64,7 +64,7 @@ This file is the working implementation map for the current prototype. It distin
 - Device status teaser
 - Secure Alpha claim flow exists in backend; claimed-user dashboard no longer shows the temporary claim panel
 - Email/password account creation and sign-in
-- Guest/anonymous sign-in UI (requires Supabase Anonymous Sign-Ins toggle)
+- Guest preview: account-free sample dashboard, plant collection/details and Herbarium navigation; simulated readings are labelled and isolated from Supabase
 - Supabase user/device ownership schema with RLS
 - Plants backend model with plant ↔ device assignment, primary plant, display order, and RLS
 - Plant water-learning fields now separate provisional and learned dry/saturated thresholds; `plant_cycles` table is ready to store repeatable irrigation/dry-down cycles

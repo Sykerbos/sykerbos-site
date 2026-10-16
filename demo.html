@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#123d32">
+  <title>Guest demo — Sykerbos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="demo.css?v=20261016-guest">
+</head>
+<body class="app-body">
+  <header class="app-header">
+    <a class="brand brand-image-link" href="index.html" aria-label="Sykerbos home"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
+    <nav class="app-nav" aria-label="App">
+      <a href="demo.html" data-view="home">Home</a>
+      <a href="demo.html?view=plants" data-view="plants">Plants</a>
+      <a href="herbarium.html?demo=1">Herbarium</a>
+    </nav>
+    <a class="text-link" href="account.html">Sign in</a>
+  </header>
+  <aside class="demo-banner" aria-label="Guest demo"><strong>Guest demo</strong><span>Sample plants and simulated readings. Explore without an account.</span><a href="account.html">Create your account →</a></aside>
+  <main class="app-shell" id="demo-content"><p>Opening your sample garden…</p><noscript><p>Enable JavaScript to explore the sample dashboard, or <a href="herbarium.html?demo=1">browse the Herbarium</a>.</p></noscript></main>
+  <nav class="mobile-nav demo-mobile-nav" aria-label="Mobile app navigation">
+    <a href="demo.html" data-view="home"><span>⌂</span>Home</a>
+    <a href="demo.html?view=plants" data-view="plants"><span>♧</span>Plants</a>
+    <a href="herbarium.html?demo=1"><span>▦</span>Herbarium</a>
+  </nav>
+  <script type="module" src="demo.js?v=20261016-guest"></script>
+</body>
+</html>

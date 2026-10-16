@@ -5,7 +5,6 @@ const form=document.querySelector('#account-form');
 const email=document.querySelector('#email');
 const password=document.querySelector('#password');
 const submit=document.querySelector('#submit-account');
-const guest=document.querySelector('#guest-button');
 const message=document.querySelector('#account-message');
 
 let mode='signin';
@@ -38,18 +37,6 @@ form.addEventListener('submit',async event=>{
 
   if(mode==='signup' && !data.session){
     setMessage('Account created. Check your email to confirm it, then return here to sign in.','success');
-    return;
-  }
-  location.href='app.html';
-});
-
-guest.addEventListener('click',async()=>{
-  guest.disabled=true;
-  setMessage('Opening guest mode…');
-  const {error}=await supabase.auth.signInAnonymously();
-  guest.disabled=false;
-  if(error){
-    setMessage('Guest accounts are not enabled yet. Your normal sign-in still works.','error');
     return;
   }
   location.href='app.html';
