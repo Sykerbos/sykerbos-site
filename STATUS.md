@@ -56,7 +56,8 @@ This file is the working implementation map for the current prototype. It distin
 - Home dashboard reads real plant records and filters short-term telemetry to the active `run_id` so historical experiments/reboots are not mixed into the live graph
 - Live seven-day weight-trend visual
 - Sykerbos learning state
-- Your Plants section
+- Dedicated `plants.html` collection page with one live tile per plant; each tile opens its own generated `plant.html?plant=...` detail page
+- Home keeps a lighter collection snapshot rather than serving as the full plant collection
 - Add another VyTile links back to onboarding
 - Plant recommendation cards
 - Want-to-grow buttons toggle locally
@@ -99,6 +100,7 @@ These elements look functional but currently use demo or placeholder behaviour:
 - User wishlist persistence
 - Achievements / badges
 - Device settings
+- Tile battery level in collection/home health views once battery telemetry exists
 - Firmware version reporting
 - Firmware update / OTA
 - Notifications
@@ -111,7 +113,6 @@ These elements look functional but currently use demo or placeholder behaviour:
 - Product `Get VyTile` / purchase path — no commerce yet
 
 ### App
-- `Plants` still points to the single-plant detail route until the dedicated collection page is built
 - `Settings` still points to the Home settings section until a dedicated settings page is built
 - `See what Sykerbos is learning →` — placeholder
 - `Browse Herbarium →` — placeholder
