@@ -1,0 +1,34 @@
+/* Keep the approved photographs intact; crop their caption bands in layout.
+   All captions are real HTML so they remain readable on small screens. */
+.setup-photo{margin:28px 0 0;border-radius:20px;overflow:hidden;background:#eee9de;border:1px solid #e0ded2}
+.sequence-frame{position:relative;aspect-ratio:803/325;overflow:hidden}
+.sequence-frame img{position:absolute;display:block;width:208.22%;max-width:none;height:auto;left:-2.366%;top:-33.54%}
+.sequence-frame-2 img,.sequence-frame-4 img{left:-105.85%}
+.sequence-frame-3 img,.sequence-frame-4 img{top:-158.77%}
+.welcome-photo>img{display:block;width:100%;height:auto;aspect-ratio:803/360;object-fit:cover;object-position:75% center}
+.setup-slide h1{font-size:clamp(2.2rem,5vw,3.7rem);line-height:1.13}
+.setup-slide .eyebrow{color:#a33160}
+.setup-slide .lede{line-height:1.65}
+.setup-slide .helper-text{font-size:.85rem;line-height:1.65}
+.setup-slide .learning-card{margin-top:20px}
+.first-cycle-guide{padding:22px;background:var(--paper);border:1px solid var(--line);border-radius:24px;margin:0 0 28px}
+.first-cycle-guide summary{font-size:1.12rem;font-weight:700;cursor:pointer;color:var(--ink)}
+.first-cycle-guide summary:focus-visible{outline:3px solid #a33160;outline-offset:5px}
+.first-cycle-intro{margin:22px 0 0;max-width:780px;color:var(--muted)}
+.first-cycle-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+.first-cycle-grid .setup-photo{margin:0 0 18px}
+.first-cycle-grid h2{font-size:1.35rem;line-height:1.3;margin:0 0 8px}
+.first-cycle-grid p{color:var(--muted);margin-bottom:0;line-height:1.65;font-size:.94rem}
+.first-cycle-grid .eyebrow{color:#a33160;margin-bottom:6px;font-size:.75rem}
+.first-cycle-guide .helper-text{font-size:.8rem;color:var(--muted);margin:24px 0 0}
+@media(max-width:640px){
+ .setup-photo{margin-top:24px;border-radius:16px}
+ .setup-slide h1{font-size:2.35rem}
+ .setup-slide{padding-top:28px;padding-bottom:28px}
+ .setup-slide .lede{font-size:1.02rem}
+ .setup-nav{grid-template-columns:1fr 1fr;gap:12px}
+ .setup-nav .dots{display:none}
+ .first-cycle-grid{grid-template-columns:1fr;gap:28px}
+ .first-cycle-guide{padding:18px}
+}
+@media(prefers-reduced-motion:reduce){.setup-slide,.pulse{animation:none}.progress span{transition:none}}

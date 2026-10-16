@@ -6,16 +6,17 @@
   <meta name="theme-color" content="#123d32">
   <title>Set up VyTile — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="onboarding.css">
+  <link rel="stylesheet" href="onboarding.css?v=wet-reference-1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="setup-imagery.css?v=1">
 </head>
 <body class="onboarding-body">
   <main class="onboarding-shell">
     <header class="onboarding-header">
       <a class="brand brand-image-link" href="index.html"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
-      <span id="step-label">Step 1 of 10</span>
+      <span id="step-label">Step 1 of 13</span>
     </header>
     <div class="progress" aria-hidden="true"><span id="progress-bar"></span></div>
 
@@ -24,7 +25,7 @@
         <article class="setup-slide active" data-step="0">
           <p class="eyebrow">Welcome to Sykerbos</p><h1>Let’s set up your VyTile.</h1>
           <p class="lede">We’ll connect it to Sykerbos and start learning how your plant uses water.</p>
-          <div class="setup-visual tile-visual"><div class="mini-pot"></div><div class="mini-tile"></div></div>
+          <figure class="setup-photo welcome-photo"><img src="assets/hero/vytile-home-hero.png" alt="Basil pot on a stone VyTile scale in a kitchen" width="1672" height="941"></figure>
         </article>
 
         <article class="setup-slide" data-step="1">
@@ -72,29 +73,51 @@
         </article>
 
         <article class="setup-slide" data-step="7">
-          <p class="eyebrow">Place your plant</p><h1>Set the complete pot on the VyTile.</h1>
-          <p class="lede">Centre the pot on the tile, then leave it still for a moment while the reading settles.</p>
-          <div class="setup-visual tile-visual"><div class="mini-pot plant-pot"></div><div class="mini-tile"></div><span class="placement-ring"></span></div>
+          <p class="eyebrow">Before the first watering cycle</p><h1>Tare the empty VyTile first.</h1>
+          <p class="lede">Put VyTile on a firm, level surface. If you’ll use a saucer, place the empty, dry saucer on the tile now. Keep the pot off the tile, then use the tare control to set this starting load to zero.</p>
+          <figure class="setup-photo welcome-photo"><img src="assets/hero/vytile-product-hero.png" alt="Empty hexagonal VyTile on a kitchen counter, ready to tare" width="1672" height="941" loading="lazy"></figure>
+          <p class="helper-text">Keep the same saucer in place during measurement. The imagery shows the design concept.</p>
         </article>
 
         <article class="setup-slide" data-step="8">
-          <p class="eyebrow">Live reading</p><h1>That looks stable.</h1>
-          <p class="lede">Sykerbos is receiving a steady reading from your VyTile.</p>
-          <div class="reading-card">
-            <span class="reading-status"><i></i> Stable</span>
-            <strong>1,284 g</strong>
-            <small>22.4 °C · VyTile Mini online</small>
-          </div>
-          <p class="helper-text">If you move the pot, wait a few seconds for the reading to settle again.</p>
+          <p class="eyebrow">First cycle · 1 of 4</p><h1>Water slowly and evenly.</h1>
+          <p class="lede">With the pot off VyTile, water the mix gently until drainage begins. If the mix is very dry, pause and water again so it wets throughout.</p>
+          <figure class="setup-photo"><div class="sequence-frame sequence-frame-1"><img src="assets/setup/first-cycle-sequence.webp" alt="Basil pot held over a sink as water is poured slowly onto the soil and begins draining from the bottom" loading="lazy" width="1672" height="941"></div></figure>
+          <p class="helper-text">The illustrations use basil to show the sequence. Follow your plant’s care needs and use a pot with drainage holes.</p>
         </article>
 
-        <article class="setup-slide completion-slide" data-step="9">
-          <p class="eyebrow">Ready to grow</p><h1><span id="plant-name-display">Kitchen Rosemary</span> is connected.</h1>
-          <p class="lede">Sykerbos is now learning how this plant uses water. The next few irrigation and dry-down cycles will build its baseline.</p>
+        <article class="setup-slide" data-step="9">
+          <p class="eyebrow">First cycle · 2 of 4</p><h1>Let excess water drain.</h1>
+          <p class="lede">Let the pot drain freely over the sink until the initial runoff finishes. Empty any collected runoff and dry the outside of the pot before placing it on VyTile.</p>
+          <figure class="setup-photo"><div class="sequence-frame sequence-frame-2"><img src="assets/setup/first-cycle-sequence.webp" alt="The same basil pot resting on a rack over the sink while the last drops of runoff drain freely" loading="lazy" width="1672" height="941"></div></figure>
+          <p class="helper-text">Start with a well-watered, freely drained pot. Keep runoff away from the tile.</p>
+        </article>
+
+        <article class="setup-slide" data-step="10">
+          <p class="eyebrow">First cycle · 3 of 4</p><h1>Place the drained pot on VyTile.</h1>
+          <p class="lede">Centre the whole pot on the tared tile, or in the saucer you included when taring. Let the reading settle without touching the pot. This is the starting point for the first wet reference.</p>
+          <figure class="setup-photo"><div class="sequence-frame sequence-frame-3"><img src="assets/setup/first-cycle-sequence.webp" alt="Hands lowering the freely drained basil pot onto the centre of a dry VyTile on the counter" loading="lazy" width="1672" height="941"></div></figure>
+        </article>
+
+        <article class="setup-slide" data-step="11">
+          <p class="eyebrow">Wet reference</p><h1>Wait for a steady reading.</h1>
+          <p class="lede">The settled weight of the well-watered, freely drained pot gives Sykerbos a reference for the first dry-down.</p>
+          <div class="reading-card">
+            <span class="reading-status"><i></i> Example · stable</span>
+            <strong>1,284 g</strong>
+            <small>22.4 °C · illustrative reading</small>
+          </div>
+          <p class="helper-text">This setup preview shows a sample reading. With your device, wait for the actual weight to settle before using it as a reference.</p>
+        </article>
+
+        <article class="setup-slide completion-slide" data-step="12">
+          <p class="eyebrow">First cycle · 4 of 4</p><h1>Follow the first dry-down.</h1>
+          <p class="lede">Leave <span id="plant-name-display">Kitchen Rosemary</span> on VyTile in its growing spot. Follow the weight as the pot dries. Repeated watering and dry-down cycles will build a picture of this plant’s behaviour.</p>
+          <figure class="setup-photo"><div class="sequence-frame sequence-frame-4"><img src="assets/setup/first-cycle-sequence.webp" alt="The same basil plant resting on VyTile by the window while its grower checks a phone without touching the pot" loading="lazy" width="1672" height="941"></div></figure>
           <div class="learning-card">
             <div><span class="learning-icon">↘</span><strong>Learning dry-down</strong><small>0 cycles observed</small></div>
             <div><span class="learning-icon">◌</span><strong>Watching irrigation</strong><small>Ready</small></div>
-            <div><span class="learning-icon">°</span><strong>Tracking temperature</strong><small>22.4 °C</small></div>
+            <div><span class="learning-icon">°</span><strong>Tracking temperature</strong><small>Alongside weight</small></div>
           </div>
           <p class="helper-text">No watering schedule yet — Sykerbos will learn from the plant first.</p>
         </article>
@@ -107,6 +130,6 @@
       </nav>
     </section>
   </main>
-  <script src="onboarding.js"></script>
+  <script src="onboarding.js?v=wet-reference-1"></script>
 </body>
 </html>

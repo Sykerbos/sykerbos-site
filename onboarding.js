@@ -2,7 +2,13 @@ const slides=[...document.querySelectorAll('.setup-slide')];
 const next=document.querySelector('#next'),back=document.querySelector('#back'),label=document.querySelector('#step-label'),bar=document.querySelector('#progress-bar'),dots=document.querySelector('#dots'),container=document.querySelector('#slides');
 const plantNameInput=document.querySelector('#plant-name'),plantNameDisplay=document.querySelector('#plant-name-display');
 let index=Number(localStorage.getItem('sykerbosOnboardingStep')||0);
-index=Math.max(0,Math.min(index,slides.length-1));
+// Migrate the previous ten-step preview without skipping first-cycle preparation.
+if(localStorage.getItem('sykerbosOnboardingFlowVersion')!=='wet-reference-v1'){
+  if(index===7||index===8) index=7;
+  else if(index===9) index=12;
+  localStorage.setItem('sykerbosOnboardingFlowVersion','wet-reference-v1');
+}
+index=Number.isFinite(index)?Math.max(0,Math.min(index,slides.length-1)):0;
 slides.forEach((_,i)=>{const d=document.createElement('span');d.dataset.i=i;dots.appendChild(d)});
 const dotEls=[...dots.children];
 
