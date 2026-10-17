@@ -54,3 +54,9 @@ textarea{font:inherit;border-radius:6px;border:1px solid #343c44;background:#101
 
 .danger{grid-column:1/-1;border-color:#6d4444}
 .selected-segment{stroke:#f2d18b!important;stroke-width:3!important}
+
+.toolstrip{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid #272d33;background:#12161a;flex-wrap:wrap}
+.toolstrip button{padding:7px 10px}
+.toolsep{width:1px;height:26px;background:#303840;margin:0 2px}
+details summary{cursor:pointer;color:#bcc6cd;font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:2px 0 12px}
+main{min-height:0}
