@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 0.9.0';
+  const BUILD='DEV 1.0.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -19,7 +19,10 @@
   let segmentDrag = null;
   let vertexDrag = null;
   let selectedSegment = null;
+  let selectedEntity = null;
   let drawMode = null;
+  let objectMove = null;
+  let shapeHandleDrag = null;
 
   function freshDrawing(){
     return {
@@ -118,6 +121,8 @@
     } else if(op==='CIRCLE'){
       if(t.length===2) startCircleMode(Number(t[1]));
       else alert('Use CIRCLE radius, e.g. CIRCLE 20');
+    } else if(op==='MOVE' || op==='M'){
+      armMove();
     } else if(op==='DIM' || op==='DIMENSION'){
       dimensionSelected();
       setCadHint('Dimension added');
@@ -127,7 +132,7 @@
     } else if(op==='ESC' || op==='CANCEL'){
       cancelDrawMode();
     } else {
-      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, DIM, DELETE');
+      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, M/MOVE, DIM, DELETE');
     }
   }
 
@@ -173,6 +178,113 @@
     }
     return false;
   }
+  function selectEntity(index){
+    selectedEntity=index;
+    if(selectedSegment && selectedSegment.entityIndex!==index) selectedSegment=null;
+    render();
+  }
+
+  function entityAnchorSnapshot(ent){
+    if(ent.type==='polyline') return {points:ent.points.map(p=>[...p])};
+    if(ent.type==='line') return {a:[...drawing.points[ent.from]],b:[...drawing.points[ent.to]]};
+    if(ent.type==='rect') return {x:ent.x,y:ent.y,width:ent.width,height:ent.height};
+    if(ent.type==='circle') return {cx:ent.cx,cy:ent.cy,r:ent.r};
+    if(ent.type==='polygon') return {points:ent.points.map(p=>[...p])};
+    return {};
+  }
+
+  function startObjectMove(e,index){
+    const ent=drawing.entities[index];
+    if(!ent) return;
+    snapshot();
+    selectedEntity=index;
+    objectMove={entityIndex:index,startX:e.clientX,startY:e.clientY,base:entityAnchorSnapshot(ent)};
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('object-moving');
+    setCadHint('Move selected object');
+  }
+
+  function moveObject(e){
+    if(!objectMove) return;
+    const ent=drawing.entities[objectMove.entityIndex];
+    const dx=(e.clientX-objectMove.startX)/view.scale;
+    const dy=-(e.clientY-objectMove.startY)/view.scale;
+    const b=objectMove.base;
+    if(ent.type==='polyline' || ent.type==='polygon'){
+      ent.points=b.points.map(p=>[fmt(p[0]+dx),fmt(p[1]+dy)]);
+    } else if(ent.type==='line'){
+      drawing.points[ent.from]=[fmt(b.a[0]+dx),fmt(b.a[1]+dy)];
+      drawing.points[ent.to]=[fmt(b.b[0]+dx),fmt(b.b[1]+dy)];
+    } else if(ent.type==='rect'){
+      ent.x=fmt(b.x+dx); ent.y=fmt(b.y+dy);
+    } else if(ent.type==='circle'){
+      ent.cx=fmt(b.cx+dx); ent.cy=fmt(b.cy+dy);
+    }
+    render();
+  }
+
+  function endObjectMove(){
+    if(!objectMove) return;
+    objectMove=null;
+    svg.classList.remove('object-moving');
+    setCadHint('Ready');
+    render();
+  }
+
+  function addShapeHandles(ent,index){
+    if(selectedEntity!==index) return;
+    if(ent.type==='rect'){
+      const corners=[[ent.x,ent.y,'bl'],[ent.x+ent.width,ent.y,'br'],[ent.x+ent.width,ent.y+ent.height,'tr'],[ent.x,ent.y+ent.height,'tl']];
+      corners.forEach(([x,y,k])=>entitiesG.appendChild(el('circle',{cx:x,cy:y,r:2.2,class:'shape-handle','data-entity-index':index,'data-handle':k})));
+    } else if(ent.type==='circle'){
+      entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:2.2,class:'shape-handle center-handle','data-entity-index':index,'data-handle':'center'}));
+      entitiesG.appendChild(el('circle',{cx:ent.cx+ent.r,cy:ent.cy,r:2.2,class:'shape-handle','data-entity-index':index,'data-handle':'radius'}));
+    }
+  }
+
+  function beginShapeHandleDrag(e,index,handle){
+    const ent=drawing.entities[index];
+    if(!ent) return;
+    snapshot();
+    selectedEntity=index;
+    shapeHandleDrag={entityIndex:index,handle,startX:e.clientX,startY:e.clientY,base:entityAnchorSnapshot(ent)};
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('shape-editing');
+  }
+
+  function moveShapeHandle(e){
+    if(!shapeHandleDrag) return;
+    const ent=drawing.entities[shapeHandleDrag.entityIndex];
+    const p=screenToWorld(e);
+    const b=shapeHandleDrag.base;
+    if(ent.type==='circle'){
+      if(shapeHandleDrag.handle==='center'){ ent.cx=p[0]; ent.cy=p[1]; }
+      else ent.r=fmt(Math.max(0.1,Math.hypot(p[0]-ent.cx,p[1]-ent.cy)));
+    } else if(ent.type==='rect'){
+      let x1=b.x, y1=b.y, x2=b.x+b.width, y2=b.y+b.height;
+      if(shapeHandleDrag.handle==='bl'){ x1=p[0]; y1=p[1]; }
+      if(shapeHandleDrag.handle==='br'){ x2=p[0]; y1=p[1]; }
+      if(shapeHandleDrag.handle==='tr'){ x2=p[0]; y2=p[1]; }
+      if(shapeHandleDrag.handle==='tl'){ x1=p[0]; y2=p[1]; }
+      ent.x=fmt(Math.min(x1,x2)); ent.y=fmt(Math.min(y1,y2));
+      ent.width=fmt(Math.abs(x2-x1)); ent.height=fmt(Math.abs(y2-y1));
+    }
+    render();
+  }
+
+  function endShapeHandleDrag(){
+    if(!shapeHandleDrag) return;
+    shapeHandleDrag=null;
+    svg.classList.remove('shape-editing');
+    render();
+  }
+
+  function armMove(){
+    if(selectedEntity===null){ alert('Select an object first, then use M or MOVE.'); return; }
+    setCadHint('MOVE — drag the selected object freely');
+    svg.classList.add('move-armed');
+  }
+
   function nextName(prefix){
     let i=1;
     const used=new Set([
@@ -244,6 +356,7 @@
     if(!raw){ alert('No saved draft in this browser yet.'); return; }
     snapshot();
     drawing=JSON.parse(raw);
+    selectedEntity=null; selectedSegment=null;
     document.getElementById('partNumber').value=drawing.partNumber||'VTR-100';
     document.getElementById('revision').value=drawing.revision||'Rev A';
     render();
@@ -251,7 +364,7 @@
   }
 
   function addSegmentVisual(ent, entityIndex, a, b, segmentIndex){
-    const cls='entity '+layerClass(ent.layer)+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
+    const cls='entity '+layerClass(ent.layer)+(selectedEntity===entityIndex?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
     entitiesG.appendChild(el('line',{
       x1:a[0],y1:a[1],x2:b[0],y2:b[1],
       class:cls
@@ -266,16 +379,15 @@
   }
 
   function addVertexHandles(ent, entityIndex){
-    if(ent.type!=='polyline') return;
-    ent.points.forEach((p,vertexIndex)=>{
-      const h=el('circle',{
-        cx:p[0],cy:p[1],r:2.2,
-        class:'vertex-handle',
-        'data-entity-index':entityIndex,
-        'data-vertex-index':vertexIndex
+    if(ent.type==='polyline'){
+      ent.points.forEach((p,vertexIndex)=>{
+        entitiesG.appendChild(el('circle',{cx:p[0],cy:p[1],r:2.2,class:'vertex-handle','data-entity-index':entityIndex,'data-vertex-index':vertexIndex}));
       });
-      entitiesG.appendChild(h);
-    });
+    } else if(ent.type==='line'){
+      const a=drawing.points[ent.from], b=drawing.points[ent.to];
+      entitiesG.appendChild(el('circle',{cx:a[0],cy:a[1],r:2.2,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'from'}));
+      entitiesG.appendChild(el('circle',{cx:b[0],cy:b[1],r:2.2,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'to'}));
+    }
   }
 
   function beginVertexDrag(e, entityIndex, vertexIndex){
@@ -587,7 +699,7 @@
       const cls=`entity ${layerClass(ent.layer)}`;
       if(ent.type==='line'){
         const a=drawing.points[ent.from], b=drawing.points[ent.to];
-        const lineCls=cls+(selectedSegment && selectedSegment.entityIndex===drawing.entities.indexOf(ent)?' selected-segment':'');
+        const lineCls=cls+(selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===drawing.entities.indexOf(ent)?' selected-segment':'');
         e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:lineCls});
         const hit=el('line',{
           x1:a[0],y1:a[1],x2:b[0],y2:b[1],
@@ -597,9 +709,13 @@
         });
         entitiesG.appendChild(hit);
       } else if(ent.type==='rect'){
-        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls});
+        const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
+        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls+sel});
+        entitiesG.appendChild(el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='circle'){
-        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls});
+        const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
+        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls+sel});
+        entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='polygon'){
         e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
       } else if(ent.type==='polyline'){
@@ -613,7 +729,7 @@
       if(e) entitiesG.appendChild(e);
     });
 
-    drawing.entities.forEach((ent,i)=>addVertexHandles(ent,i));
+    drawing.entities.forEach((ent,i)=>{ addVertexHandles(ent,i); addShapeHandles(ent,i); });
 
     drawing.dimensions.forEach(dim=>{
       const a=dim.type==='xy'?dim.a:drawing.points[dim.from];
@@ -728,6 +844,43 @@
       handleDrawClick(e);
       return;
     }
+
+    const shapeHandle=e.target.closest && e.target.closest('.shape-handle');
+    if(shapeHandle){
+      e.preventDefault(); e.stopPropagation();
+      beginShapeHandleDrag(e,Number(shapeHandle.dataset.entityIndex),shapeHandle.dataset.handle);
+      return;
+    }
+
+    const lineEnd=e.target.closest && e.target.closest('.line-end-handle');
+    if(lineEnd){
+      e.preventDefault(); e.stopPropagation();
+      const index=Number(lineEnd.dataset.entityIndex);
+      const ent=drawing.entities[index];
+      snapshot();
+      selectedEntity=index;
+      shapeHandleDrag={entityIndex:index,handle:'line-'+lineEnd.dataset.lineEnd,startX:e.clientX,startY:e.clientY,base:entityAnchorSnapshot(ent)};
+      svg.setPointerCapture(e.pointerId); svg.classList.add('shape-editing');
+      return;
+    }
+
+    const objectHit=e.target.closest && e.target.closest('.object-hit');
+    const segHit=e.target.closest && e.target.closest('.segment-hit');
+    const hitIndex=objectHit?Number(objectHit.dataset.entityIndex):(segHit?Number(segHit.dataset.entityIndex):null);
+
+    if(svg.classList.contains('move-armed') && hitIndex!==null && hitIndex===selectedEntity){
+      e.preventDefault(); e.stopPropagation();
+      svg.classList.remove('move-armed');
+      startObjectMove(e,selectedEntity);
+      return;
+    }
+
+    if(objectHit){
+      e.preventDefault(); e.stopPropagation();
+      selectEntity(Number(objectHit.dataset.entityIndex));
+      return;
+    }
+
     const vertex=e.target.closest && e.target.closest('.vertex-handle');
     if(vertex){
       e.preventDefault();
@@ -739,6 +892,7 @@
     if(hit){
       e.preventDefault();
       e.stopPropagation();
+      selectedEntity=Number(hit.dataset.entityIndex);
       beginSegmentDrag(e,Number(hit.dataset.entityIndex),Number(hit.dataset.segmentIndex));
       return;
     }
@@ -746,6 +900,17 @@
     svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
   });
   svg.addEventListener('pointermove',e=>{
+    if(objectMove){ moveObject(e); return; }
+    if(shapeHandleDrag){
+      if(shapeHandleDrag.handle?.startsWith('line-')){
+        const ent=drawing.entities[shapeHandleDrag.entityIndex];
+        const p=screenToWorld(e);
+        const which=shapeHandleDrag.handle==='line-from'?ent.from:ent.to;
+        drawing.points[which]=p;
+        render();
+      } else moveShapeHandle(e);
+      return;
+    }
     if(vertexDrag){ moveVertex(e); return; }
     if(segmentDrag){ moveSegment(e); return; }
     if(!drag)return;
@@ -754,11 +919,15 @@
     updateTransform();
   });
   svg.addEventListener('pointerup',()=>{
+    if(objectMove){ endObjectMove(); return; }
+    if(shapeHandleDrag){ endShapeHandleDrag(); return; }
     if(vertexDrag){ endVertexDrag(); return; }
     if(segmentDrag){ endSegmentDrag(); return; }
     drag=null;svg.classList.remove('dragging');
   });
   svg.addEventListener('pointercancel',()=>{
+    if(objectMove){ endObjectMove(); }
+    if(shapeHandleDrag){ endShapeHandleDrag(); }
     if(vertexDrag){ endVertexDrag(); }
     if(segmentDrag){ endSegmentDrag(); }
     drag=null;svg.classList.remove('dragging');
@@ -767,6 +936,7 @@
   document.getElementById('toolLine')?.addEventListener('click',()=>{ setCadCommand('LINE'); startLineMode(null); });
   document.getElementById('toolSquare')?.addEventListener('click',()=>{ setCadCommand('SQUARE 40'); startRectMode(40,40); });
   document.getElementById('toolCircle')?.addEventListener('click',()=>{ setCadCommand('CIRCLE 20'); startCircleMode(20); });
+  document.getElementById('moveSelected')?.addEventListener('click',()=>{ setCadCommand('M'); armMove(); });
   document.getElementById('dimensionSelected')?.addEventListener('click',dimensionSelected);
   document.getElementById('deleteSelectedTop')?.addEventListener('click',deleteSelectedSegment);
   document.getElementById('undoTop')?.addEventListener('click',()=>document.getElementById('undoBtn').click());
