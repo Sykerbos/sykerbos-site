@@ -20,6 +20,7 @@
       partNumber:'VTR-100',
       revision:'Rev A',
       currentLayer:'FIXED',
+      pointLabels:false,
       layers:['REFERENCE','FIXED','LIVE','DIMENSION'],
       points:{},
       entities:[],
@@ -58,8 +59,8 @@
     if(!drawing.points[a] || !drawing.points[b]) throw new Error('DIM needs two named points');
     drawing.dimensions.push({type:'named',from:a,to:b,layer:'DIMENSION'});
   }
-  function addDimXY(x1,y1,x2,y2){
-    drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],layer:'DIMENSION'});
+  function addDimXY(x1,y1,x2,y2,offset=12){
+    drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],offset:fmt(offset),layer:'DIMENSION'});
   }
 
   function executeSingle(cmd){
@@ -75,6 +76,10 @@
       const layer=t[1].toUpperCase();
       if(!drawing.layers.includes(layer)) drawing.layers.push(layer);
       drawing.currentLayer=layer;
+
+    } else if(op==='POINTLABELS'){
+      if(t.length!==2 || !['ON','OFF'].includes(t[1].toUpperCase())) throw new Error('POINTLABELS ON or POINTLABELS OFF');
+      drawing.pointLabels=t[1].toUpperCase()==='ON';
 
     } else if(op==='LINE'){
       const assigned=cmd.match(/^LINE\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)$/i);
@@ -121,8 +126,11 @@
       addDim(t[1],t[2]);
 
     } else if(op==='DIMXY'){
-      if(t.length!==5) throw new Error('DIMXY x1 y1 x2 y2');
-      addDimXY(...t.slice(1).map(Number));
+      if(t.length!==5 && t.length!==7) throw new Error('DIMXY x1 y1 x2 y2 [OFFSET n]');
+      if(t.length===7 && t[5].toUpperCase()!=='OFFSET') throw new Error('Use DIMXY x1 y1 x2 y2 OFFSET n');
+      const nums=t.slice(1,5).map(Number);
+      const offset=t.length===7?Number(t[6]):12;
+      addDimXY(...nums,offset);
 
     } else if(op==='CLEAR'){
       drawing=freshDrawing();
@@ -157,10 +165,12 @@
     entitiesG.innerHTML=''; labelsG.innerHTML='';
 
     for(const [name,[x,y]] of Object.entries(drawing.points)){
-      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:2.2,class:'point'}));
-      const txt=el('text',{x:x+4,y:y-4,class:'label'});
-      txt.textContent=`${name} (${x}, ${y})`;
-      labelsG.appendChild(txt);
+      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:1.5,class:'point'}));
+      if(drawing.pointLabels && !name.startsWith('_L')){
+        const txt=el('text',{x:x+3,y:y-3,class:'label'});
+        txt.textContent=`${name} (${x}, ${y})`;
+        labelsG.appendChild(txt);
+      }
     }
 
     drawing.entities.forEach(ent=>{
@@ -185,9 +195,18 @@
     drawing.dimensions.forEach(dim=>{
       const a=dim.type==='xy'?dim.a:drawing.points[dim.from];
       const b=dim.type==='xy'?dim.b:drawing.points[dim.to];
-      labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'dimension'}));
-      const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
-      const tx=(a[0]+b[0])/2, ty=(a[1]+b[1])/2-4;
+      const dx=b[0]-a[0], dy=b[1]-a[1];
+      const d=Math.hypot(dx,dy);
+      if(!d) return;
+      const offset=dim.offset ?? 12;
+      const nx=-dy/d, ny=dx/d;
+      const da=[a[0]+nx*offset,a[1]+ny*offset];
+      const db=[b[0]+nx*offset,b[1]+ny*offset];
+      labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:da[0],y2:da[1],class:'extension'}));
+      labelsG.appendChild(el('line',{x1:b[0],y1:b[1],x2:db[0],y2:db[1],class:'extension'}));
+      labelsG.appendChild(el('line',{x1:da[0],y1:da[1],x2:db[0],y2:db[1],class:'dimension'}));
+      const tx=(da[0]+db[0])/2 + nx*3;
+      const ty=(da[1]+db[1])/2 + ny*3;
       const txt=el('text',{x:tx,y:ty,class:'dimtext'});
       txt.textContent=`${fmt(d)} mm`;
       labelsG.appendChild(txt);
@@ -205,7 +224,7 @@
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer}`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Point labels: ${drawing.pointLabels?'ON':'OFF'}`;
     updateTransform();
   }
 
