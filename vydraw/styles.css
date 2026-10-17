@@ -43,3 +43,7 @@ textarea{font:inherit;border-radius:6px;border:1px solid #343c44;background:#101
 .layer-badge{display:inline-block;padding:2px 6px;border-radius:4px;background:#20272d;color:#b7c1c8;margin-left:4px;font-size:10px}
 
 .extension{stroke:#607067;stroke-width:.7;fill:none;vector-effect:non-scaling-stroke}
+
+.segment-hit{stroke:transparent;stroke-width:10;vector-effect:non-scaling-stroke;cursor:move;pointer-events:stroke}
+.selected-segment{stroke-width:3}
+#drawing.segment-dragging{cursor:move}
