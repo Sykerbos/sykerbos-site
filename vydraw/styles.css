@@ -28,9 +28,9 @@ button{cursor:pointer}button:hover{border-color:#66717a}.primary{background:#213
 .axis{stroke:var(--axis);stroke-width:1}
 .entity{fill:none;stroke:var(--line);stroke-width:1.5;vector-effect:non-scaling-stroke}
 .point{fill:var(--accent);stroke:none}
-.label{fill:#c9d2d8;font-size:10px;user-select:none}
+.label{fill:#c9d2d8;font-size:5px;user-select:none}
 .dimension{stroke:#8bb397;stroke-width:1;fill:none;vector-effect:non-scaling-stroke;marker-start:url(#arrow);marker-end:url(#arrow)}
-.dimtext{fill:#9fd2aa;font-size:10px;text-anchor:middle}
+.dimtext{fill:#9fd2aa;font-size:5px;text-anchor:middle}
 .dim-arrow{fill:#8bb397}
 .obj{padding:7px;border-bottom:1px solid #262d33;font-size:11px;color:#c8d1d7}
 pre{white-space:pre-wrap;font-size:10px;color:#aebbc4;background:var(--panel2);padding:8px;border-radius:6px;max-height:280px;overflow:auto}
@@ -41,3 +41,5 @@ textarea{font:inherit;border-radius:6px;border:1px solid #343c44;background:#101
 .entity.layer-live{stroke:#8bc59a}
 .entity.layer-dimension{stroke:#9fd2aa}
 .layer-badge{display:inline-block;padding:2px 6px;border-radius:4px;background:#20272d;color:#b7c1c8;margin-left:4px;font-size:10px}
+
+.extension{stroke:#607067;stroke-width:.7;fill:none;vector-effect:non-scaling-stroke}
