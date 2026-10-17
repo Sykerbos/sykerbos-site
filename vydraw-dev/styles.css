@@ -36,9 +36,9 @@ button{cursor:pointer}button:hover{border-color:#66717a}.primary{background:#213
 pre{white-space:pre-wrap;font-size:10px;color:#aebbc4;background:var(--panel2);padding:8px;border-radius:6px;max-height:280px;overflow:auto}
 @media(max-width:900px){main{grid-template-columns:220px 1fr}.right{display:none}}
 textarea{font:inherit;border-radius:6px;border:1px solid #343c44;background:#101419;color:var(--text);padding:8px;resize:vertical;min-height:92px;width:100%}
-.entity.layer-reference{stroke:#8d99a3}
-.entity.layer-fixed{stroke:#dfe7ec}
-.entity.layer-live{stroke:#8bc59a}
+.entity.layer-reference{stroke:#4aa3ff}
+.entity.layer-fixed{stroke:#65c27a}
+.entity.layer-live{stroke:#f0a45d}
 .entity.layer-dimension{stroke:#9fd2aa}
 .layer-badge{display:inline-block;padding:2px 6px;border-radius:4px;background:#20272d;color:#b7c1c8;margin-left:4px;font-size:10px}
 
@@ -78,3 +78,9 @@ main{min-height:0}
 #drawing.shape-editing{cursor:crosshair}
 
 .shape-entity{pointer-events:none}
+
+.dimension-hit{stroke:transparent;stroke-width:10;vector-effect:non-scaling-stroke;pointer-events:stroke;cursor:pointer}
+.selected-dimension{stroke:#ffd166!important;fill:#ffd166!important}
+.layerkey{font-size:11px;padding:4px 7px;border-radius:4px;border:1px solid #343c44}
+.railkey{color:#4aa3ff}
+.clipkey{color:#65c27a}
