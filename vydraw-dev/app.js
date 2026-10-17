@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 0.7.0';
+  const BUILD='DEV 0.8.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -38,6 +38,87 @@
   function restore(serialized){ drawing=JSON.parse(serialized); if(!drawing.currentLayer) drawing.currentLayer='FIXED'; render(); }
   function fmt(n){ return Number(Number(n).toFixed(3)); }
   function layerClass(layer){ return 'layer-' + String(layer||'FIXED').toLowerCase(); }
+
+  function worldCenter(){
+    return [fmt(-view.x/view.scale), fmt(view.y/view.scale)];
+  }
+
+  function nextName(prefix){
+    let i=1;
+    const used=new Set([
+      ...Object.keys(drawing.points),
+      ...drawing.entities.map(e=>e.name).filter(Boolean)
+    ]);
+    while(used.has(prefix+i)) i++;
+    return prefix+i;
+  }
+
+  function addQuickLine(){
+    snapshot();
+    const [cx,cy]=worldCenter();
+    const a=nextName('A'), b=nextName('B');
+    addPoint(a,cx-25,cy);
+    addPoint(b,cx+25,cy);
+    drawing.entities.push({type:'line',name:nextName('LINE'),from:a,to:b,layer:drawing.currentLayer});
+    render();
+  }
+
+  function addQuickSquare(){
+    snapshot();
+    const [cx,cy]=worldCenter();
+    drawing.entities.push({type:'rect',name:nextName('SQUARE'),x:fmt(cx-20),y:fmt(cy-20),width:40,height:40,layer:drawing.currentLayer});
+    render();
+  }
+
+  function addQuickCircle(){
+    snapshot();
+    const [cx,cy]=worldCenter();
+    drawing.entities.push({type:'circle',name:nextName('CIRCLE'),cx,cy,r:20,layer:drawing.currentLayer});
+    render();
+  }
+
+  function selectedEndpoints(){
+    if(!selectedSegment) return null;
+    const ent=drawing.entities[selectedSegment.entityIndex];
+    if(!ent) return null;
+    if(ent.type==='line'){
+      return [drawing.points[ent.from],drawing.points[ent.to]];
+    }
+    if(ent.type==='polyline'){
+      const i=selectedSegment.segmentIndex;
+      const a=ent.points[i];
+      const b=ent.points[(i+1)%ent.points.length];
+      return [a,b];
+    }
+    return null;
+  }
+
+  function dimensionSelected(){
+    const ends=selectedEndpoints();
+    if(!ends){ alert('Select a line or profile segment first.'); return; }
+    snapshot();
+    addDimXY(ends[0][0],ends[0][1],ends[1][0],ends[1][1],12);
+    render();
+  }
+
+  function saveDraft(){
+    drawing.partNumber=document.getElementById('partNumber').value;
+    drawing.revision=document.getElementById('revision').value;
+    localStorage.setItem('vydraw-draft',JSON.stringify(drawing));
+    const btn=document.getElementById('saveDraft');
+    if(btn){ const old=btn.textContent; btn.textContent='Saved ✓'; setTimeout(()=>btn.textContent=old,1200); }
+  }
+
+  function loadDraft(){
+    const raw=localStorage.getItem('vydraw-draft');
+    if(!raw){ alert('No saved draft in this browser yet.'); return; }
+    snapshot();
+    drawing=JSON.parse(raw);
+    document.getElementById('partNumber').value=drawing.partNumber||'VTR-100';
+    document.getElementById('revision').value=drawing.revision||'Rev A';
+    render();
+    fitView();
+  }
 
   function addSegmentVisual(ent, entityIndex, a, b, segmentIndex){
     const cls='entity '+layerClass(ent.layer)+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
@@ -546,6 +627,17 @@
     if(segmentDrag){ endSegmentDrag(); }
     drag=null;svg.classList.remove('dragging');
   });
+
+  document.getElementById('toolLine')?.addEventListener('click',addQuickLine);
+  document.getElementById('toolSquare')?.addEventListener('click',addQuickSquare);
+  document.getElementById('toolCircle')?.addEventListener('click',addQuickCircle);
+  document.getElementById('dimensionSelected')?.addEventListener('click',dimensionSelected);
+  document.getElementById('deleteSelectedTop')?.addEventListener('click',deleteSelectedSegment);
+  document.getElementById('undoTop')?.addEventListener('click',()=>document.getElementById('undoBtn').click());
+  document.getElementById('redoTop')?.addEventListener('click',()=>document.getElementById('redoBtn').click());
+  document.getElementById('fitTop')?.addEventListener('click',fitView);
+  document.getElementById('saveDraft')?.addEventListener('click',saveDraft);
+  document.getElementById('loadDraft')?.addEventListener('click',loadDraft);
 
   const deleteBtn=document.getElementById('deleteSelected');
   if(deleteBtn) deleteBtn.onclick=deleteSelectedSegment;
