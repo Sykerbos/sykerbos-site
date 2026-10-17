@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VyDraw DEV 1.1.0</title>
-  <link rel="stylesheet" href="styles.css?dev=110" />
+  <title>VyDraw DEV 1.3.0</title>
+  <link rel="stylesheet" href="styles.css?dev=130" />
 </head>
 <body>
   <header>
     <div>
-      <h1>VyDraw <span id="runtimeVersion">DEV 1.1.0</span></h1>
+      <h1>VyDraw <span id="runtimeVersion">DEV 1.3.0</span></h1>
       <p>1 drawing unit = 1 mm</p>
     </div>
     <div class="meta">
@@ -19,6 +19,9 @@
   </header>
 
   <div class="toolstrip" aria-label="Quick drawing tools">
+    <button id="toolSelect" title="Selection window">⌖ Select</button>
+    <button id="toolPan" title="Pan drawing view">✋ Pan</button>
+    <span class="toolsep"></span>
     <button id="toolLine" title="Add line">／ Line</button>
     <button id="toolSquare" title="Add square">□ Square</button>
     <button id="toolCircle" title="Add circle">○ Circle</button>
@@ -45,6 +48,8 @@
       <summary>Advanced commands</summary>
       <h2>Commands</h2>
       <div class="help">
+        <code>SELECT</code>
+        <code>PAN</code>
         <code>POINT A 0 0</code>
         <code>LINE A B</code>
         <code>RECT 0 0 100 45</code>
@@ -124,6 +129,6 @@
     <span id="cadHint" class="cad-hint">Ready</span>
   </div>
 
-  <script src="app.js?dev=110"></script>
+  <script src="app.js?dev=130"></script>
 </body>
 </html>
