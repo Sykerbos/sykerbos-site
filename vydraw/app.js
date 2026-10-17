@@ -15,29 +15,51 @@
   let drag = null;
 
   function freshDrawing(){
-    return {units:'mm',partNumber:'VTR-100',revision:'Rev A',points:{},entities:[],dimensions:[]};
+    return {
+      units:'mm',
+      partNumber:'VTR-100',
+      revision:'Rev A',
+      currentLayer:'FIXED',
+      layers:['REFERENCE','FIXED','LIVE','DIMENSION'],
+      points:{},
+      entities:[],
+      dimensions:[]
+    };
   }
+
   function snapshot(){ history.push(JSON.stringify(drawing)); if(history.length>50) history.shift(); future=[]; }
-  function restore(serialized){ drawing=JSON.parse(serialized); render(); }
+  function restore(serialized){ drawing=JSON.parse(serialized); if(!drawing.currentLayer) drawing.currentLayer='FIXED'; render(); }
   function fmt(n){ return Number(Number(n).toFixed(3)); }
+  function layerClass(layer){ return 'layer-' + String(layer||'FIXED').toLowerCase(); }
+
   function addPoint(name,x,y){ drawing.points[name]=[fmt(x),fmt(y)]; }
   function addLine(a,b){
     if(!drawing.points[a] || !drawing.points[b]) throw new Error(`Unknown point: ${!drawing.points[a]?a:b}`);
-    drawing.entities.push({type:'line',from:a,to:b});
+    drawing.entities.push({type:'line',from:a,to:b,layer:drawing.currentLayer});
   }
-  function addRect(x,y,w,h){ drawing.entities.push({type:'rect',x:fmt(x),y:fmt(y),width:fmt(w),height:fmt(h)}); }
-  function addCircle(x,y,r){ drawing.entities.push({type:'circle',cx:fmt(x),cy:fmt(y),r:fmt(r)}); }
+  function addRect(x,y,w,h){ drawing.entities.push({type:'rect',x:fmt(x),y:fmt(y),width:fmt(w),height:fmt(h),layer:drawing.currentLayer}); }
+  function addCircle(x,y,r){ drawing.entities.push({type:'circle',cx:fmt(x),cy:fmt(y),r:fmt(r),layer:drawing.currentLayer}); }
   function addHexAF(af){
     const R=af/Math.sqrt(3), pts=[];
     for(let i=0;i<6;i++){
       const angle=(-90+i*60)*Math.PI/180;
       pts.push([fmt(R*Math.cos(angle)),fmt(R*Math.sin(angle))]);
     }
-    drawing.entities.push({type:'polygon',points:pts,meta:{shape:'hexagon',acrossFlats:fmt(af)}});
+    drawing.entities.push({type:'polygon',points:pts,closed:true,layer:drawing.currentLayer,meta:{shape:'hexagon',acrossFlats:fmt(af)}});
+  }
+  function addPolyline(name, coords, closed){
+    if(coords.length<4 || coords.length%2!==0) throw new Error('POLYLINE needs at least two x y coordinate pairs');
+    const pts=[];
+    for(let i=0;i<coords.length;i+=2) pts.push([fmt(Number(coords[i])),fmt(Number(coords[i+1]))]);
+    if(pts.some(p=>!Number.isFinite(p[0])||!Number.isFinite(p[1]))) throw new Error('POLYLINE contains an invalid coordinate');
+    drawing.entities.push({type:'polyline',name,points:pts,closed,layer:drawing.currentLayer});
   }
   function addDim(a,b){
     if(!drawing.points[a] || !drawing.points[b]) throw new Error('DIM needs two named points');
-    drawing.dimensions.push({from:a,to:b});
+    drawing.dimensions.push({type:'named',from:a,to:b,layer:'DIMENSION'});
+  }
+  function addDimXY(x1,y1,x2,y2){
+    drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],layer:'DIMENSION'});
   }
 
   function executeSingle(cmd){
@@ -47,6 +69,12 @@
     if(op==='POINT'){
       if(t.length!==4) throw new Error('POINT name x y');
       addPoint(t[1],Number(t[2]),Number(t[3]));
+
+    } else if(op==='LAYER'){
+      if(t.length!==2) throw new Error('LAYER name');
+      const layer=t[1].toUpperCase();
+      if(!drawing.layers.includes(layer)) drawing.layers.push(layer);
+      drawing.currentLayer=layer;
 
     } else if(op==='LINE'){
       const assigned=cmd.match(/^LINE\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)$/i);
@@ -68,6 +96,13 @@
         throw new Error('Use LINE A B, LINE 0 0 100 25, or LINE A=(0,0) B=(100,25)');
       }
 
+    } else if(op==='POLYLINE'){
+      if(t.length<6) throw new Error('POLYLINE name x1 y1 x2 y2 ... [CLOSE]');
+      const name=t[1];
+      const closed=t[t.length-1].toUpperCase()==='CLOSE';
+      const raw=closed?t.slice(2,-1):t.slice(2);
+      addPolyline(name,raw,closed);
+
     } else if(op==='RECT'){
       if(t.length!==5) throw new Error('RECT x y width height');
       addRect(...t.slice(1).map(Number));
@@ -84,6 +119,10 @@
     } else if(op==='DIM'){
       if(t.length!==3) throw new Error('DIM pointA pointB');
       addDim(t[1],t[2]);
+
+    } else if(op==='DIMXY'){
+      if(t.length!==5) throw new Error('DIMXY x1 y1 x2 y2');
+      addDimXY(...t.slice(1).map(Number));
 
     } else if(op==='CLEAR'){
       drawing=freshDrawing();
@@ -126,21 +165,26 @@
 
     drawing.entities.forEach(ent=>{
       let e;
+      const cls=`entity ${layerClass(ent.layer)}`;
       if(ent.type==='line'){
         const a=drawing.points[ent.from], b=drawing.points[ent.to];
-        e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'entity'});
+        e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:cls});
       } else if(ent.type==='rect'){
-        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:'entity'});
+        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls});
       } else if(ent.type==='circle'){
-        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:'entity'});
+        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls});
       } else if(ent.type==='polygon'){
-        e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:'entity'});
+        e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
+      } else if(ent.type==='polyline'){
+        const tag=ent.closed?'polygon':'polyline';
+        e=el(tag,{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
       }
       if(e) entitiesG.appendChild(e);
     });
 
     drawing.dimensions.forEach(dim=>{
-      const a=drawing.points[dim.from], b=drawing.points[dim.to];
+      const a=dim.type==='xy'?dim.a:drawing.points[dim.from];
+      const b=dim.type==='xy'?dim.b:drawing.points[dim.to];
       labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'dimension'}));
       const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
       const tx=(a[0]+b[0])/2, ty=(a[1]+b[1])/2-4;
@@ -154,13 +198,14 @@
     jsonPreview.textContent=JSON.stringify(drawing,null,2);
 
     objectList.innerHTML='';
-    const rows=[];
+    const rows=[`Active layer: ${drawing.currentLayer}`];
     Object.keys(drawing.points).forEach(k=>rows.push(`Point ${k}`));
-    drawing.entities.forEach((e,i)=>rows.push(`${i+1}. ${e.type}${e.meta?.shape?` — ${e.meta.shape}`:''}`));
-    drawing.dimensions.forEach(d=>rows.push(`DIM ${d.from} → ${d.to}`));
-    if(!rows.length) rows.push('No objects yet.');
+    drawing.entities.forEach((e,i)=>rows.push(`${i+1}. ${e.type}${e.name?` ${e.name}`:''} [${e.layer||'FIXED'}]${e.meta?.shape?` — ${e.meta.shape}`:''}`));
+    drawing.dimensions.forEach(d=>rows.push(d.type==='xy'?'DIMXY':'DIM '+d.from+' → '+d.to));
+    if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer}`;
     updateTransform();
   }
 
