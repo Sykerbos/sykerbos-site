@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 0.8.0';
+  const BUILD='DEV 0.9.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -19,6 +19,7 @@
   let segmentDrag = null;
   let vertexDrag = null;
   let selectedSegment = null;
+  let drawMode = null;
 
   function freshDrawing(){
     return {
@@ -43,6 +44,135 @@
     return [fmt(-view.x/view.scale), fmt(view.y/view.scale)];
   }
 
+  function screenToWorld(e){
+    const rect=svg.getBoundingClientRect();
+    const cx=svg.clientWidth/2, cy=svg.clientHeight/2;
+    return [
+      fmt((e.clientX-rect.left-cx-view.x)/view.scale),
+      fmt(-(e.clientY-rect.top-cy-view.y)/view.scale)
+    ];
+  }
+
+  function setCadHint(text){
+    const hint=document.getElementById('cadHint');
+    if(hint) hint.textContent=text;
+  }
+
+  function setCadCommand(text){
+    const input=document.getElementById('cadCommand');
+    if(input) input.value=text;
+  }
+
+  function finishDrawMode(){
+    if(!drawMode) return;
+    drawMode=null;
+    svg.classList.remove('drawing-mode');
+    setCadHint('Ready');
+    render();
+  }
+
+  function cancelDrawMode(){
+    if(!drawMode) return;
+    if(drawMode.snapshot) drawing=JSON.parse(drawMode.snapshot);
+    drawMode=null;
+    svg.classList.remove('drawing-mode');
+    setCadHint('Cancelled');
+    render();
+  }
+
+  function startLineMode(length=null){
+    drawMode={tool:'LINE',length:(Number.isFinite(length)&&length>0)?length:null,points:[],snapshot:JSON.stringify(drawing),entityIndex:null};
+    svg.classList.add('drawing-mode');
+    setCadHint(length ? ('LINE '+length+' mm — click start point') : 'LINE — click first point');
+  }
+
+  function startRectMode(width,height){
+    if(!(width>0&&height>0)){ alert('Use RECT width height, e.g. RECT 120 40'); return; }
+    drawMode={tool:'RECT',width,height,snapshot:JSON.stringify(drawing)};
+    svg.classList.add('drawing-mode');
+    setCadHint('RECT '+width+' × '+height+' mm — click placement point');
+  }
+
+  function startCircleMode(radius){
+    if(!(radius>0)){ alert('Use CIRCLE radius, e.g. CIRCLE 20'); return; }
+    drawMode={tool:'CIRCLE',radius,snapshot:JSON.stringify(drawing)};
+    svg.classList.add('drawing-mode');
+    setCadHint('CIRCLE R'+radius+' mm — click centre');
+  }
+
+  function runCadCommand(raw){
+    const text=raw.trim();
+    if(!text) return;
+    const t=text.split(/\s+/);
+    const op=t[0].toUpperCase();
+    if(op==='LINE'){
+      if(t.length===1) startLineMode(null);
+      else if(t.length===2 && Number(t[1])>0) startLineMode(Number(t[1]));
+      else alert('Use LINE or LINE 100');
+    } else if(op==='RECT' || op==='RECTANGLE'){
+      if(t.length===3) startRectMode(Number(t[1]),Number(t[2]));
+      else alert('Use RECT width height, e.g. RECT 120 40');
+    } else if(op==='SQUARE'){
+      if(t.length===2 && Number(t[1])>0) startRectMode(Number(t[1]),Number(t[1]));
+      else alert('Use SQUARE size, e.g. SQUARE 40');
+    } else if(op==='CIRCLE'){
+      if(t.length===2) startCircleMode(Number(t[1]));
+      else alert('Use CIRCLE radius, e.g. CIRCLE 20');
+    } else if(op==='DIM' || op==='DIMENSION'){
+      dimensionSelected();
+      setCadHint('Dimension added');
+    } else if(op==='DELETE'){
+      deleteSelectedSegment();
+      setCadHint('Selected line deleted');
+    } else if(op==='ESC' || op==='CANCEL'){
+      cancelDrawMode();
+    } else {
+      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, DIM, DELETE');
+    }
+  }
+
+  function handleDrawClick(e){
+    if(!drawMode) return false;
+    const p=screenToWorld(e);
+    if(drawMode.tool==='CIRCLE'){
+      snapshot();
+      drawing.entities.push({type:'circle',name:nextName('CIRCLE'),cx:p[0],cy:p[1],r:fmt(drawMode.radius),layer:drawing.currentLayer});
+      finishDrawMode();
+      return true;
+    }
+    if(drawMode.tool==='RECT'){
+      snapshot();
+      drawing.entities.push({type:'rect',name:nextName('RECT'),x:p[0],y:p[1],width:fmt(drawMode.width),height:fmt(drawMode.height),layer:drawing.currentLayer});
+      finishDrawMode();
+      return true;
+    }
+    if(drawMode.tool==='LINE'){
+      if(drawMode.points.length===0){
+        snapshot();
+        drawMode.points.push(p);
+        drawing.entities.push({type:'polyline',name:nextName('LINE'),points:[p],closed:false,layer:drawing.currentLayer});
+        drawMode.entityIndex=drawing.entities.length-1;
+        setCadHint(drawMode.length ? ('Click direction for '+drawMode.length+' mm segment') : 'Click next point • Enter/Space to finish');
+        render();
+        return true;
+      }
+      const ent=drawing.entities[drawMode.entityIndex];
+      const start=ent.points[ent.points.length-1];
+      let end=p;
+      if(drawMode.length){
+        const dx=p[0]-start[0], dy=p[1]-start[1];
+        const d=Math.hypot(dx,dy);
+        if(d<0.0001) return true;
+        end=[fmt(start[0]+dx/d*drawMode.length),fmt(start[1]+dy/d*drawMode.length)];
+      }
+      ent.points.push(end);
+      drawMode.points.push(end);
+      setCadHint(drawMode.length ? (drawMode.length+' mm added • click next direction • Enter/Space to finish') : 'Segment added • click next point • Enter/Space to finish');
+      render();
+      return true;
+    }
+    return false;
+  }
   function nextName(prefix){
     let i=1;
     const used=new Set([
@@ -517,7 +647,7 @@
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag line = move • Drag green node = reshape`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag line = move • Drag green node = reshape • Command line at bottom`;
     updateTransform();
   }
 
@@ -592,6 +722,12 @@
   },{passive:false});
 
   svg.addEventListener('pointerdown',e=>{
+    if(drawMode){
+      e.preventDefault();
+      e.stopPropagation();
+      handleDrawClick(e);
+      return;
+    }
     const vertex=e.target.closest && e.target.closest('.vertex-handle');
     if(vertex){
       e.preventDefault();
@@ -628,9 +764,9 @@
     drag=null;svg.classList.remove('dragging');
   });
 
-  document.getElementById('toolLine')?.addEventListener('click',addQuickLine);
-  document.getElementById('toolSquare')?.addEventListener('click',addQuickSquare);
-  document.getElementById('toolCircle')?.addEventListener('click',addQuickCircle);
+  document.getElementById('toolLine')?.addEventListener('click',()=>{ setCadCommand('LINE'); startLineMode(null); });
+  document.getElementById('toolSquare')?.addEventListener('click',()=>{ setCadCommand('SQUARE 40'); startRectMode(40,40); });
+  document.getElementById('toolCircle')?.addEventListener('click',()=>{ setCadCommand('CIRCLE 20'); startCircleMode(20); });
   document.getElementById('dimensionSelected')?.addEventListener('click',dimensionSelected);
   document.getElementById('deleteSelectedTop')?.addEventListener('click',deleteSelectedSegment);
   document.getElementById('undoTop')?.addEventListener('click',()=>document.getElementById('undoBtn').click());
@@ -639,12 +775,40 @@
   document.getElementById('saveDraft')?.addEventListener('click',saveDraft);
   document.getElementById('loadDraft')?.addEventListener('click',loadDraft);
 
+  const cadCommand=document.getElementById('cadCommand');
+  if(cadCommand){
+    cadCommand.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){
+        e.preventDefault();
+        if(drawMode && drawMode.tool==='LINE'){
+          const ent=drawing.entities[drawMode.entityIndex];
+          if(ent?.points?.length>=2) finishDrawMode();
+        } else if(!drawMode){
+          runCadCommand(cadCommand.value);
+        }
+      } else if(e.key==='Escape'){
+        e.preventDefault();
+        cancelDrawMode();
+      }
+    });
+  }
   const deleteBtn=document.getElementById('deleteSelected');
   if(deleteBtn) deleteBtn.onclick=deleteSelectedSegment;
 
   document.addEventListener('keydown',e=>{
     const tag=(document.activeElement?.tagName||'').toUpperCase();
     const editing=['INPUT','TEXTAREA','SELECT'].includes(tag);
+    if(!editing && drawMode && drawMode.tool==='LINE' && (e.key==='Enter' || e.key===' ')){
+      e.preventDefault();
+      const ent=drawing.entities[drawMode.entityIndex];
+      if(ent?.points?.length>=2) finishDrawMode();
+      return;
+    }
+    if(!editing && e.key==='Escape' && drawMode){
+      e.preventDefault();
+      cancelDrawMode();
+      return;
+    }
     if(!editing && (e.key==='Delete' || e.key==='Backspace') && selectedSegment){
       e.preventDefault();
       deleteSelectedSegment();
