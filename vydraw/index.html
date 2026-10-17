@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VyDraw 0.3</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>VyDraw <span>0.3</span></h1>
+      <p>1 drawing unit = 1 mm</p>
+    </div>
+    <div class="meta">
+      <input id="partNumber" value="VTR-100" aria-label="Part number">
+      <input id="revision" value="Rev A" aria-label="Revision">
+    </div>
+  </header>
+
+  <main>
+    <aside class="panel left">
+      <h2>Commands</h2>
+      <div class="help">
+        <code>POINT A 0 0</code>
+        <code>LINE A B</code>
+        <code>RECT 0 0 100 45</code>
+        <code>CIRCLE 20 20 3</code>
+        <code>HEX AF=200</code>
+        <code>DIM A B</code>
+        <code>CLEAR</code>
+      </div>
+
+      <label for="commandInput">Command</label>
+      <div class="command-row">
+        <textarea id="commandInput" autocomplete="off" placeholder="POINT A 0 0&#10;POINT B 100 0&#10;LINE A B"></textarea>
+        <button id="runCommand">Run</button>
+      </div>
+
+      <div class="toolbar">
+        <button id="fitView">Fit</button>
+        <button id="toggleGrid">Grid</button>
+        <button id="undoBtn">Undo</button>
+        <button id="redoBtn">Redo</button>
+      </div>
+
+      <h2>Quick start</h2>
+      <button id="demoHex" class="primary">Draw 200 mm hex</button>
+
+      <h2>Export</h2>
+      <button id="exportSvg">Export SVG</button>
+      <button id="exportJson">Export JSON</button>
+    </aside>
+
+    <section class="workspace">
+      <svg id="drawing" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="minorGrid" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" class="grid minor"/>
+          </pattern>
+          <pattern id="majorGrid" width="50" height="50" patternUnits="userSpaceOnUse">
+            <rect width="50" height="50" fill="url(#minorGrid)"/>
+            <path d="M 50 0 L 0 0 0 50" class="grid major"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4"
+                  orient="auto-start-reverse" markerUnits="strokeWidth">
+            <path d="M0,0 L8,4 L0,8 z" class="dim-arrow"/>
+          </marker>
+        </defs>
+
+        <g id="viewport">
+          <rect id="gridRect" x="-5000" y="-5000" width="10000" height="10000" fill="url(#majorGrid)"/>
+          <g id="axes">
+            <line x1="-5000" y1="0" x2="5000" y2="0" class="axis"/>
+            <line x1="0" y1="-5000" x2="0" y2="5000" class="axis"/>
+          </g>
+          <g id="entities"></g>
+          <g id="labels"></g>
+        </g>
+      </svg>
+      <div id="status">Origin (0,0) • Units: mm</div>
+    </section>
+
+    <aside class="panel right">
+      <h2>Objects</h2>
+      <div id="objectList"></div>
+      <h2>Drawing JSON</h2>
+      <pre id="jsonPreview"></pre>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
