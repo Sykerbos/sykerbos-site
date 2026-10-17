@@ -68,3 +68,11 @@ main{min-height:0}
 .cad-hint{font-size:12px;color:#9fd2aa;white-space:nowrap}
 #drawing.drawing-mode{cursor:crosshair}
 @media(max-width:900px){.cad-hint{display:none}}
+
+.object-hit{fill:transparent;stroke:transparent;stroke-width:10;vector-effect:non-scaling-stroke;pointer-events:all;cursor:pointer}
+.selected-object{stroke:#74c7ff!important;stroke-width:2.5!important}
+.shape-handle,.line-end-handle{fill:#74c7ff;stroke:#0f1215;stroke-width:1;vector-effect:non-scaling-stroke;cursor:crosshair}
+.center-handle{fill:#f2d18b}
+#drawing.move-armed{cursor:move}
+#drawing.object-moving{cursor:move}
+#drawing.shape-editing{cursor:crosshair}
