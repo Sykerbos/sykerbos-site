@@ -233,6 +233,7 @@ async function init(){
     return;
   }
   const p=rows[0];
+  $('#water-vytile-button').href='watering.html?plant='+encodeURIComponent(p.id);
   const asset=plantAssetFor(p);
   const profile=behaviorProfile(p);
   window.__plantBehaviorProfile=profile;

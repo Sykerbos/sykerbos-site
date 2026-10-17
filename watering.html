@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123d32">
+<title>Water VyTile — Sykerbos</title>
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="watering.css?v=1">
+<link rel="icon" href="favicon.ico" sizes="any">
+</head>
+<body class="watering-body">
+<header class="watering-header"><a href="index.html" aria-label="Sykerbos home"><img src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a><a id="back-plant" class="text-link" href="app.html">← Back to plant</a></header>
+<main class="watering-shell">
+<div id="demo-notice" class="watering-notice" hidden>Watering example · Simulated readings. No real device is connected.</div>
+<section class="watering-title"><p class="eyebrow">Water VyTile</p><h1>Water with a target.</h1><p id="plant-name" class="lede">Loading your plant…</p></section>
+<p id="page-error" class="watering-notice" role="alert" hidden></p>
+<div class="watering-grid">
+<section class="water-panel plan-panel" aria-labelledby="plan-title">
+<p class="eyebrow">1 · Plan your watering</p><h2 id="plan-title">How much this time?</h2>
+<div class="suggestion"><small>Refill to the saved wet reference</small><strong id="suggested">—</strong><button id="use-suggestion" type="button" class="plain-button" disabled>Use this amount</button></div>
+<label class="water-field" for="target-amount">Your water target <span>ml ≈ g retained</span></label>
+<div class="amount-input"><input id="target-amount" type="number" min="0.1" max="50000" step="0.1" inputmode="decimal" placeholder="e.g. 120"><span>ml</span></div>
+<p class="field-help">Edit this amount to explore a different refill. Progress measures the pot’s net weight gain, after any runoff.</p>
+<div class="projection"><div><small>Target pot weight</small><strong id="target-weight">—</strong></div><div><small>Reserve time at this rate</small><strong id="projected-days">Learning</strong></div></div>
+<p id="projection-note" class="field-help">A planning estimate needs wet/dry references and a water-use assumption.</p>
+<p id="wet-warning" class="watering-notice" role="status" hidden></p>
+<details class="assumptions"><summary>Check the estimate’s assumptions</summary><p id="reference-note">Waiting for plant references.</p><label class="water-field" for="daily-rate">Assumed daily water loss <span>g/day</span></label><input id="daily-rate" type="number" min="0.1" max="10000" step="0.1" inputmode="decimal" placeholder="Learning"><p id="rate-note" class="field-help"></p><p class="field-help">Water use can increase after watering. This scenario is not yet a dependable holiday forecast.</p></details>
+<p class="stored-reading" id="stored-reading">Loading the stored planning reference…</p>
+</section>
+<section class="water-panel live-panel" aria-labelledby="live-title">
+<p class="eyebrow">2 · Watch the scale</p><h2 id="live-title">Live weight</h2>
+<div id="connection-state" class="connection-state">Not connected to VyTile</div>
+<div class="live-weight"><strong id="live-weight">—</strong><span>g</span></div><p id="sample-age" class="field-help">Live device readings will appear here. Stored readings are never used as a live feed.</p>
+<div class="session-metrics"><div><small>Weight gained</small><strong id="added-weight">—</strong></div><div><small>To your target</small><strong id="remaining-weight">—</strong></div></div>
+<progress id="water-progress" max="100" value="0" aria-label="Progress toward watering target"></progress>
+<p id="pour-message" class="pour-message" role="status">Connect your VyTile before starting.</p>
+<div class="session-buttons"><button id="start-watering" class="button" type="button" disabled>Start watering</button><button id="end-watering" class="button button-secondary" type="button" disabled>End session</button></div>
+<div id="demo-controls" class="demo-controls" hidden><p>Simulate weight gain</p><button type="button" data-add="10">+10 g</button><button type="button" data-add="25">+25 g</button><button type="button" data-add="50">+50 g</button></div>
+<details id="direct-connection" class="direct-connection"><summary>Connect directly to your VyTile · Alpha</summary><p>Use the same Wi-Fi as your VyTile. Its live-reading connection needs to be enabled in the device firmware first.</p><form id="connect-form"><label for="device-url" class="water-field">Device live-reading address</label><input id="device-url" type="url" placeholder="http://your-vytile.local/live" autocomplete="off"><button class="button button-small" type="submit">Connect VyTile</button></form><p id="connection-help" class="field-help">We need to check your current firmware before this connection can be completed. Your browser may ask for local-network permission.</p><button id="disconnect" class="plain-button" type="button" hidden>Disconnect</button></details>
+<p class="field-help final-note">Keep the pot still on the tile while pouring. Pour slowly near the target and let drainage finish before checking the final weight.</p>
+</section>
+</div>
+</main>
+<script type="module" src="watering.js?v=1"></script>
+</body></html>
