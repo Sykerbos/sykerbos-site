@@ -1,5 +1,6 @@
 import { supabase } from './supabase-client.js';
 import { plantAssetFor } from './plant-assets.js';
+import { observedRange } from './observed-range.js?v=1';
 
 const $=s=>document.querySelector(s);
 const fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
@@ -288,63 +289,53 @@ async function init(){
     $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
   }
 
-  const recentWeights=recentRangeRows
-    .map(r=>Number(r.weight_g))
-    .filter(Number.isFinite)
-    .sort((a,b)=>a-b);
-  let low=null,high=null;
-  if(recentWeights.length>=8){
-    const pct=q=>{
-      const i=(recentWeights.length-1)*q;
-      const lo=Math.floor(i),hi=Math.ceil(i),f=i-lo;
-      return recentWeights[lo]*(1-f)+recentWeights[hi]*f;
-    };
-    low=pct(.05);
-    high=pct(.95);
-  }else if(recentWeights.length){
-    low=recentWeights[0];
-    high=recentWeights.at(-1);
-  }
-  const current=Number(latest?.weight_g);
-  let reserveG=null,reservePercent=null;
-  if(Number.isFinite(low)&&Number.isFinite(high)&&high>low&&Number.isFinite(current)){
-    $('#range-low-side').textContent=low.toFixed(1)+' g';
-    $('#range-high-side').textContent=high.toFixed(1)+' g';
+  let current=null,reserveG=null,reservePercent=null;
+  function updateWaterRange(rangeRows,reading){
+    const observed=observedRange(rangeRows,reading);
+    const {low,high}=observed;
+    current=observed.current;
+    reserveG=null;reservePercent=null;
+    $('#range-low-side').textContent=low===null?'—':low.toFixed(1)+' g';
+    $('#range-high-side').textContent=high===null?'—':high.toFixed(1)+' g';
+    if(Number.isFinite(low)&&Number.isFinite(high)&&Number.isFinite(current)){
 
-    const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
-    const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
-    const gauge=$('#radial-gauge');
+      const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
+      const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
+      const gauge=$('#radial-gauge');
 
-    if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
-      reserveG=Math.max(0,current-dryThreshold);
-      reservePercent=Math.max(0,Math.min(100,(reserveG/(wetThreshold-dryThreshold))*100));
-      gauge.style.setProperty('--level',reservePercent.toFixed(1));
-      gauge.style.setProperty('--angle',(reservePercent*3.6).toFixed(1)+'deg');
-      $('#range-percent').textContent=Math.round(reservePercent)+'%';
-      $('#range-percent').classList.remove('learning-reserve');
-      $('#range-explanation').textContent=`Reserve uses ${p.learned_dry_g!=null?'learned':'experimental'} dry/saturated thresholds (${dryThreshold.toFixed(0)}–${wetThreshold.toFixed(0)} g). The recent 72-reading band below remains a short-term reference only.`;
-    }else{
-      const recentPosition=Math.max(0,Math.min(100,((current-low)/(high-low))*100));
-      gauge.style.setProperty('--level',recentPosition.toFixed(1));
-      gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
-      $('#range-percent').textContent='Learning';
-      $('#range-percent').classList.add('learning-reserve');
+      if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
+        reserveG=Math.max(0,current-dryThreshold);
+        reservePercent=Math.max(0,Math.min(100,(reserveG/(wetThreshold-dryThreshold))*100));
+        gauge.style.setProperty('--level',reservePercent.toFixed(1));
+        gauge.style.setProperty('--angle',(reservePercent*3.6).toFixed(1)+'deg');
+        $('#range-percent').textContent=Math.round(reservePercent)+'%';
+        $('#range-percent').classList.remove('learning-reserve');
+        $('#range-explanation').textContent=`Reserve uses ${p.learned_dry_g!=null?'learned':'experimental'} dry/saturated thresholds (${dryThreshold.toFixed(0)}–${wetThreshold.toFixed(0)} g). The recent low/high below are actual measured extremes from the latest 72 readings in this run, including the current reading. New lows extend the observed dry-down; they do not automatically change the watering threshold.`;
+      }else{
+        const recentPosition=high>low?Math.max(0,Math.min(100,((current-low)/(high-low))*100)):0;
+        gauge.style.setProperty('--level',recentPosition.toFixed(1));
+        gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
+        $('#range-percent').textContent='Learning';
+        $('#range-percent').classList.add('learning-reserve');
+        $('#range-explanation').textContent='Recent low/high show actual measured extremes from the latest 72 readings in this run, including the current reading. Watering references are still being learned.';
+      }
+
+      if(profile?.preferredBand){
+        gauge.style.setProperty('--pref-start',profile.preferredBand[0]);
+        gauge.style.setProperty('--pref-size',profile.preferredBand[1]-profile.preferredBand[0]);
+        $('#preferred-band-label').textContent=`Preferred range · ${profile.preferredBand[0]}–${profile.preferredBand[1]}% reserve`;
+      }else{
+        gauge.style.setProperty('--pref-size',0);
+        $('#preferred-band-label').textContent=profile
+          ? 'Preferred range · research + plant learning pending'
+          : 'Preferred range · learning';
+      }
     }
 
-    if(profile?.preferredBand){
-      gauge.style.setProperty('--pref-start',profile.preferredBand[0]);
-      gauge.style.setProperty('--pref-size',profile.preferredBand[1]-profile.preferredBand[0]);
-      $('#preferred-band-label').textContent=`Preferred range · ${profile.preferredBand[0]}–${profile.preferredBand[1]}% reserve`;
-    }else{
-      gauge.style.setProperty('--pref-size',0);
-      $('#preferred-band-label').textContent=profile
-        ? 'Preferred range · research + plant learning pending'
-        : 'Preferred range · learning';
-    }
+    window.__plantReserveG=reserveG;
+    window.__plantReservePercent=reservePercent;
   }
-
-  window.__plantReserveG=reserveG;
-  window.__plantReservePercent=reservePercent;
+  updateWaterRange(recentRangeRows,latest);
 
   const count=Number(runSummary?.reading_count||summary?.reading_count||0);
   $('#plant-intelligence-title').textContent='Learning '+plantName(p)+'.';
@@ -409,6 +400,55 @@ async function init(){
     await loadRange(device.id,hoursFor[button.textContent.trim()]||24,latest?.run_id||null);
   }));
   await loadRange(device.id,24,latest?.run_id||null);
+
+  // Keep the current weight and its measured range together while this page is open.
+  let refreshing=false;
+  let displayedStamp=stampOf(latest),displayedWeight=latest?.weight_g;
+  async function refreshCurrentReading(){
+    if(refreshing||document.hidden) return;
+    refreshing=true;
+    try{
+      const {data:latestRows,error}=await supabase.from('readings')
+        .select('weight_g,temperature_c,measured_at,created_at,run_id')
+        .eq('device_id',device.id)
+        .order('measured_at',{ascending:false,nullsFirst:false})
+        .order('created_at',{ascending:false}).limit(1);
+      if(error) throw error;
+      const newest=latestRows?.[0];
+      if(!newest) return;
+      if((newest.run_id||null)!==(latest?.run_id||null)){
+        $('#plant-summary').textContent='A new measurement run has started. Reload this page to view its readings separately.';
+        return;
+      }
+      const freshNow=stampOf(newest)&&(Date.now()-timeOf(newest)<90*60000);
+      $('#plant-status').textContent=maintenance?'Maintenance':freshNow?'Connected':'Last seen '+ageLabel(stampOf(newest));
+      $('#plant-status').className='status '+(maintenance?'offline':freshNow?'good':'learning');
+      if(stampOf(newest)===displayedStamp&&newest.weight_g===displayedWeight) return;
+      let rangeQuery=supabase.from('readings')
+        .select('weight_g,measured_at,created_at,run_id').eq('device_id',device.id)
+        .order('measured_at',{ascending:false,nullsFirst:false})
+        .order('created_at',{ascending:false}).limit(72);
+      if(newest.run_id) rangeQuery=rangeQuery.eq('run_id',newest.run_id);
+      const {data:rangeRows,error:rangeError}=await rangeQuery;
+      if(rangeError) throw rangeError;
+      updateWaterRange(rangeRows||[],newest);
+      $('#plant-weight').textContent=fmt(newest.weight_g)+' g';
+      $('#plant-temperature').textContent=fmt(newest.temperature_c)+' °C';
+      $('#intel-current').textContent=Number.isFinite(current)?current.toFixed(1)+' g':'—';
+      if(Number.isFinite(current)&&Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
+        const position=Math.max(0,Math.min(100,((wetThreshold-current)/(wetThreshold-dryThreshold))*100));
+        $('#reserve-current-marker').style.left=position+'%';
+        $('#reserve-current-label').style.left=position+'%';
+      }
+      displayedStamp=stampOf(newest);displayedWeight=newest.weight_g;
+      const selected=rangeButtons.find(button=>button.classList.contains('active'));
+      await loadRange(device.id,hoursFor[selected?.textContent.trim()]||24,newest.run_id||null);
+    }catch(error){console.error('Could not refresh plant readings',error);}
+    finally{refreshing=false;}
+  }
+  const refreshTimer=setInterval(refreshCurrentReading,60000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden) refreshCurrentReading();});
+  window.addEventListener('pagehide',()=>clearInterval(refreshTimer),{once:true});
 }
 
 init();
