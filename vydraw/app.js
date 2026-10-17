@@ -100,24 +100,37 @@
 
   function beginSegmentDrag(e, entityIndex, segmentIndex){
     const ent=drawing.entities[entityIndex];
-    if(!ent || ent.type!=='polyline') return false;
-    const count=ent.points.length;
-    const i1=segmentIndex;
-    const i2=(segmentIndex+1)%count;
-    if(i1<0 || i1>=count || i2<0 || i2>=count) return false;
+    if(!ent) return false;
 
     snapshot();
     selectedSegment={entityIndex,segmentIndex};
-    const a=[...ent.points[i1]], b=[...ent.points[i2]];
+
+    let a,b,i1=0,i2=1;
+    if(ent.type==='polyline'){
+      const count=ent.points.length;
+      i1=segmentIndex;
+      i2=(segmentIndex+1)%count;
+      if(i1<0 || i1>=count || i2<0 || i2>=count) return false;
+      a=[...ent.points[i1]];
+      b=[...ent.points[i2]];
+    } else if(ent.type==='line'){
+      a=[...drawing.points[ent.from]];
+      b=[...drawing.points[ent.to]];
+    } else {
+      return false;
+    }
+
     const horizontal=Math.abs(a[1]-b[1])<0.0001;
     const vertical=Math.abs(a[0]-b[0])<0.0001;
     segmentDrag={
       entityIndex,segmentIndex,i1,i2,
       startX:e.clientX,startY:e.clientY,
-      a,b,horizontal,vertical
+      a,b,horizontal,vertical,
+      entityType:ent.type
     };
     svg.setPointerCapture(e.pointerId);
     svg.classList.add('segment-dragging');
+    render();
     return true;
   }
 
@@ -127,15 +140,24 @@
     const dx=(e.clientX-segmentDrag.startX)/view.scale;
     const dy=-(e.clientY-segmentDrag.startY)/view.scale;
 
+    let na,nb;
     if(segmentDrag.horizontal){
-      ent.points[segmentDrag.i1]=[segmentDrag.a[0],fmt(segmentDrag.a[1]+dy)];
-      ent.points[segmentDrag.i2]=[segmentDrag.b[0],fmt(segmentDrag.b[1]+dy)];
+      na=[segmentDrag.a[0],fmt(segmentDrag.a[1]+dy)];
+      nb=[segmentDrag.b[0],fmt(segmentDrag.b[1]+dy)];
     } else if(segmentDrag.vertical){
-      ent.points[segmentDrag.i1]=[fmt(segmentDrag.a[0]+dx),segmentDrag.a[1]];
-      ent.points[segmentDrag.i2]=[fmt(segmentDrag.b[0]+dx),segmentDrag.b[1]];
+      na=[fmt(segmentDrag.a[0]+dx),segmentDrag.a[1]];
+      nb=[fmt(segmentDrag.b[0]+dx),segmentDrag.b[1]];
     } else {
-      ent.points[segmentDrag.i1]=[fmt(segmentDrag.a[0]+dx),fmt(segmentDrag.a[1]+dy)];
-      ent.points[segmentDrag.i2]=[fmt(segmentDrag.b[0]+dx),fmt(segmentDrag.b[1]+dy)];
+      na=[fmt(segmentDrag.a[0]+dx),fmt(segmentDrag.a[1]+dy)];
+      nb=[fmt(segmentDrag.b[0]+dx),fmt(segmentDrag.b[1]+dy)];
+    }
+
+    if(segmentDrag.entityType==='polyline'){
+      ent.points[segmentDrag.i1]=na;
+      ent.points[segmentDrag.i2]=nb;
+    } else if(segmentDrag.entityType==='line'){
+      drawing.points[ent.from]=na;
+      drawing.points[ent.to]=nb;
     }
     render();
   }
@@ -175,6 +197,62 @@
   }
   function addDimXY(x1,y1,x2,y2,offset=12){
     drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],offset:fmt(offset),layer:'DIMENSION'});
+  }
+
+  function deleteSelectedSegment(){
+    if(!selectedSegment) return;
+    const {entityIndex,segmentIndex}=selectedSegment;
+    const ent=drawing.entities[entityIndex];
+    if(!ent) return;
+
+    snapshot();
+
+    if(ent.type==='polyline'){
+      const pts=ent.points.map(p=>[...p]);
+
+      if(ent.closed){
+        // Removing one edge from a closed profile turns it into one open polyline.
+        const rotated=[];
+        for(let i=1;i<pts.length;i++){
+          rotated.push(pts[(segmentIndex+i)%pts.length]);
+        }
+        rotated.push(pts[segmentIndex]);
+        ent.points=rotated;
+        ent.closed=false;
+
+      } else {
+        const lastSeg=pts.length-2;
+
+        if(segmentIndex===0){
+          ent.points=pts.slice(1);
+        } else if(segmentIndex===lastSeg){
+          ent.points=pts.slice(0,-1);
+        } else {
+          // Interior deletion breaks one polyline into two independent polylines.
+          const left=pts.slice(0,segmentIndex+1);
+          const right=pts.slice(segmentIndex+1);
+          ent.points=left;
+          const base=ent.name||'POLY';
+          drawing.entities.splice(entityIndex+1,0,{
+            type:'polyline',
+            name:base+'_B',
+            points:right,
+            closed:false,
+            layer:ent.layer
+          });
+        }
+
+        if(ent.points.length<2){
+          drawing.entities.splice(entityIndex,1);
+        }
+      }
+
+    } else if(ent.type==='line'){
+      drawing.entities.splice(entityIndex,1);
+    }
+
+    selectedSegment=null;
+    render();
   }
 
   function executeSingle(cmd){
@@ -246,6 +324,9 @@
       const offset=t.length===7?Number(t[6]):12;
       addDimXY(...nums,offset);
 
+    } else if(op==='DELETE'){
+      deleteSelectedSegment();
+
     } else if(op==='CLEAR'){
       drawing=freshDrawing();
 
@@ -292,7 +373,15 @@
       const cls=`entity ${layerClass(ent.layer)}`;
       if(ent.type==='line'){
         const a=drawing.points[ent.from], b=drawing.points[ent.to];
-        e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:cls});
+        const lineCls=cls+(selectedSegment && selectedSegment.entityIndex===drawing.entities.indexOf(ent)?' selected-segment':'');
+        e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:lineCls});
+        const hit=el('line',{
+          x1:a[0],y1:a[1],x2:b[0],y2:b[1],
+          class:'segment-hit',
+          'data-entity-index':drawing.entities.indexOf(ent),
+          'data-segment-index':0
+        });
+        entitiesG.appendChild(hit);
       } else if(ent.type==='rect'){
         e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls});
       } else if(ent.type==='circle'){
@@ -453,6 +542,18 @@
     if(vertexDrag){ endVertexDrag(); }
     if(segmentDrag){ endSegmentDrag(); }
     drag=null;svg.classList.remove('dragging');
+  });
+
+  const deleteBtn=document.getElementById('deleteSelected');
+  if(deleteBtn) deleteBtn.onclick=deleteSelectedSegment;
+
+  document.addEventListener('keydown',e=>{
+    const tag=(document.activeElement?.tagName||'').toUpperCase();
+    const editing=['INPUT','TEXTAREA','SELECT'].includes(tag);
+    if(!editing && (e.key==='Delete' || e.key==='Backspace') && selectedSegment){
+      e.preventDefault();
+      deleteSelectedSegment();
+    }
   });
 
   window.addEventListener('resize',updateTransform);
