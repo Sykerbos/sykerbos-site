@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VyDraw DEV 1.0.1</title>
-  <link rel="stylesheet" href="styles.css?dev=101" />
+  <title>VyDraw DEV 1.1.0</title>
+  <link rel="stylesheet" href="styles.css?dev=110" />
 </head>
 <body>
   <header>
     <div>
-      <h1>VyDraw <span id="runtimeVersion">DEV 1.0.1</span></h1>
+      <h1>VyDraw <span id="runtimeVersion">DEV 1.1.0</span></h1>
       <p>1 drawing unit = 1 mm</p>
     </div>
     <div class="meta">
@@ -25,11 +25,15 @@
     <span class="toolsep"></span>
     <button id="moveSelected" title="Move selected object">✥ Move</button>
     <button id="dimensionSelected" title="Dimension selected line">↔ Dimension</button>
-    <button id="deleteSelectedTop" title="Delete selected line">⌫ Delete</button>
+    <button id="deleteSelectedTop" title="Delete selected object/line/dimension">⌫ Delete</button>
+    <button id="clearDimensions" title="Remove all dimensions">Clear dims</button>
     <span class="toolsep"></span>
     <button id="undoTop">Undo</button>
     <button id="redoTop">Redo</button>
     <button id="fitTop">Fit</button>
+    <span class="toolsep"></span>
+    <span class="layerkey railkey">Rail / Reference</span>
+    <span class="layerkey clipkey">Clip / Fixed</span>
     <span class="toolsep"></span>
     <button id="saveDraft" class="primary">Save draft</button>
     <button id="loadDraft">Load draft</button>
@@ -120,6 +124,6 @@
     <span id="cadHint" class="cad-hint">Ready</span>
   </div>
 
-  <script src="app.js?dev=101"></script>
+  <script src="app.js?dev=110"></script>
 </body>
 </html>
