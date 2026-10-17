@@ -710,11 +710,11 @@
         entitiesG.appendChild(hit);
       } else if(ent.type==='rect'){
         const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
-        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls+sel});
+        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls+sel+' shape-entity'});
         entitiesG.appendChild(el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='circle'){
         const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
-        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls+sel});
+        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls+sel+' shape-entity'});
         entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='polygon'){
         e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
