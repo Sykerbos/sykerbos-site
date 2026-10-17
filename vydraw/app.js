@@ -14,6 +14,7 @@
   let view = { x: 0, y: 0, scale: 3 };
   let drag = null;
   let segmentDrag = null;
+  let vertexDrag = null;
   let selectedSegment = null;
 
   function freshDrawing(){
@@ -48,6 +49,53 @@
       'data-segment-index':segmentIndex
     });
     entitiesG.appendChild(hit);
+  }
+
+  function addVertexHandles(ent, entityIndex){
+    if(ent.type!=='polyline') return;
+    ent.points.forEach((p,vertexIndex)=>{
+      const h=el('circle',{
+        cx:p[0],cy:p[1],r:2.2,
+        class:'vertex-handle',
+        'data-entity-index':entityIndex,
+        'data-vertex-index':vertexIndex
+      });
+      entitiesG.appendChild(h);
+    });
+  }
+
+  function beginVertexDrag(e, entityIndex, vertexIndex){
+    const ent=drawing.entities[entityIndex];
+    if(!ent || ent.type!=='polyline' || !ent.points[vertexIndex]) return false;
+    snapshot();
+    const p=[...ent.points[vertexIndex]];
+    vertexDrag={
+      entityIndex,vertexIndex,
+      startX:e.clientX,startY:e.clientY,
+      point:p
+    };
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('vertex-dragging');
+    return true;
+  }
+
+  function moveVertex(e){
+    if(!vertexDrag) return;
+    const ent=drawing.entities[vertexDrag.entityIndex];
+    const dx=(e.clientX-vertexDrag.startX)/view.scale;
+    const dy=-(e.clientY-vertexDrag.startY)/view.scale;
+    ent.points[vertexDrag.vertexIndex]=[
+      fmt(vertexDrag.point[0]+dx),
+      fmt(vertexDrag.point[1]+dy)
+    ];
+    render();
+  }
+
+  function endVertexDrag(){
+    if(!vertexDrag) return;
+    vertexDrag=null;
+    svg.classList.remove('vertex-dragging');
+    render();
   }
 
   function beginSegmentDrag(e, entityIndex, segmentIndex){
@@ -262,6 +310,8 @@
       if(e) entitiesG.appendChild(e);
     });
 
+    drawing.entities.forEach((ent,i)=>addVertexHandles(ent,i));
+
     drawing.dimensions.forEach(dim=>{
       const a=dim.type==='xy'?dim.a:drawing.points[dim.from];
       const b=dim.type==='xy'?dim.b:drawing.points[dim.to];
@@ -294,7 +344,7 @@
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag a profile segment to move it`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag line = move • Drag green node = reshape`;
     updateTransform();
   }
 
@@ -369,6 +419,13 @@
   },{passive:false});
 
   svg.addEventListener('pointerdown',e=>{
+    const vertex=e.target.closest && e.target.closest('.vertex-handle');
+    if(vertex){
+      e.preventDefault();
+      e.stopPropagation();
+      beginVertexDrag(e,Number(vertex.dataset.entityIndex),Number(vertex.dataset.vertexIndex));
+      return;
+    }
     const hit=e.target.closest && e.target.closest('.segment-hit');
     if(hit){
       e.preventDefault();
@@ -380,6 +437,7 @@
     svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
   });
   svg.addEventListener('pointermove',e=>{
+    if(vertexDrag){ moveVertex(e); return; }
     if(segmentDrag){ moveSegment(e); return; }
     if(!drag)return;
     view.x=drag.vx+(e.clientX-drag.x);
@@ -387,10 +445,12 @@
     updateTransform();
   });
   svg.addEventListener('pointerup',()=>{
+    if(vertexDrag){ endVertexDrag(); return; }
     if(segmentDrag){ endSegmentDrag(); return; }
     drag=null;svg.classList.remove('dragging');
   });
   svg.addEventListener('pointercancel',()=>{
+    if(vertexDrag){ endVertexDrag(); }
     if(segmentDrag){ endSegmentDrag(); }
     drag=null;svg.classList.remove('dragging');
   });
