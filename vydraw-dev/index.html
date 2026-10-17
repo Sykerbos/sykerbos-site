@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VyDraw DEV 0.7.0</title>
-  <link rel="stylesheet" href="styles.css?dev=070" />
+  <title>VyDraw DEV 0.8.0</title>
+  <link rel="stylesheet" href="styles.css?dev=080" />
 </head>
 <body>
   <header>
     <div>
-      <h1>VyDraw <span id="runtimeVersion">DEV 0.7.0</span></h1>
+      <h1>VyDraw <span id="runtimeVersion">DEV 0.8.0</span></h1>
       <p>1 drawing unit = 1 mm</p>
     </div>
     <div class="meta">
@@ -18,8 +18,26 @@
     </div>
   </header>
 
+  <div class="toolstrip" aria-label="Quick drawing tools">
+    <button id="toolLine" title="Add line">／ Line</button>
+    <button id="toolSquare" title="Add square">□ Square</button>
+    <button id="toolCircle" title="Add circle">○ Circle</button>
+    <span class="toolsep"></span>
+    <button id="dimensionSelected" title="Dimension selected line">↔ Dimension</button>
+    <button id="deleteSelectedTop" title="Delete selected line">⌫ Delete</button>
+    <span class="toolsep"></span>
+    <button id="undoTop">Undo</button>
+    <button id="redoTop">Redo</button>
+    <button id="fitTop">Fit</button>
+    <span class="toolsep"></span>
+    <button id="saveDraft" class="primary">Save draft</button>
+    <button id="loadDraft">Load draft</button>
+  </div>
+
   <main>
     <aside class="panel left">
+      <details>
+      <summary>Advanced commands</summary>
       <h2>Commands</h2>
       <div class="help">
         <code>POINT A 0 0</code>
@@ -48,13 +66,14 @@
         <button id="redoBtn">Redo</button>
         <button id="deleteSelected" class="danger">Delete selected line</button>
       </div>
+      </details>
 
       <h2>Quick start</h2>
       <button id="demoHex" class="primary">Draw 200 mm hex</button>
 
       <h2>Export</h2>
       <button id="exportSvg">Export SVG</button>
-      <button id="exportJson">Export JSON</button>
+      <button id="exportJson">Download review JSON</button>
     </aside>
 
     <section class="workspace">
@@ -94,6 +113,6 @@
     </aside>
   </main>
 
-  <script src="app.js?dev=070"></script>
+  <script src="app.js?dev=080"></script>
 </body>
 </html>
