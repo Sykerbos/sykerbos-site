@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 1.1.0';
+  const BUILD='DEV 1.1.1';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -240,10 +240,10 @@
     if(selectedEntity!==index) return;
     if(ent.type==='rect'){
       const corners=[[ent.x,ent.y,'bl'],[ent.x+ent.width,ent.y,'br'],[ent.x+ent.width,ent.y+ent.height,'tr'],[ent.x,ent.y+ent.height,'tl']];
-      corners.forEach(([x,y,k])=>entitiesG.appendChild(el('circle',{cx:x,cy:y,r:2.2,class:'shape-handle','data-entity-index':index,'data-handle':k})));
+      corners.forEach(([x,y,k])=>entitiesG.appendChild(el('circle',{cx:x,cy:y,r:1.4,class:'shape-handle','data-entity-index':index,'data-handle':k})));
     } else if(ent.type==='circle'){
-      entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:2.2,class:'shape-handle center-handle','data-entity-index':index,'data-handle':'center'}));
-      entitiesG.appendChild(el('circle',{cx:ent.cx+ent.r,cy:ent.cy,r:2.2,class:'shape-handle','data-entity-index':index,'data-handle':'radius'}));
+      entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:1.4,class:'shape-handle center-handle','data-entity-index':index,'data-handle':'center'}));
+      entitiesG.appendChild(el('circle',{cx:ent.cx+ent.r,cy:ent.cy,r:1.4,class:'shape-handle','data-entity-index':index,'data-handle':'radius'}));
     }
   }
 
@@ -386,12 +386,12 @@
   function addVertexHandles(ent, entityIndex){
     if(ent.type==='polyline'){
       ent.points.forEach((p,vertexIndex)=>{
-        entitiesG.appendChild(el('circle',{cx:p[0],cy:p[1],r:2.2,class:'vertex-handle','data-entity-index':entityIndex,'data-vertex-index':vertexIndex}));
+        entitiesG.appendChild(el('circle',{cx:p[0],cy:p[1],r:1.4,class:'vertex-handle','data-entity-index':entityIndex,'data-vertex-index':vertexIndex}));
       });
     } else if(ent.type==='line'){
       const a=drawing.points[ent.from], b=drawing.points[ent.to];
-      entitiesG.appendChild(el('circle',{cx:a[0],cy:a[1],r:2.2,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'from'}));
-      entitiesG.appendChild(el('circle',{cx:b[0],cy:b[1],r:2.2,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'to'}));
+      entitiesG.appendChild(el('circle',{cx:a[0],cy:a[1],r:1.4,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'from'}));
+      entitiesG.appendChild(el('circle',{cx:b[0],cy:b[1],r:1.4,class:'line-end-handle','data-entity-index':entityIndex,'data-line-end':'to'}));
     }
   }
 
@@ -530,6 +530,13 @@
     drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],offset:fmt(offset),layer:'DIMENSION'});
   }
 
+  function cleanupOrphanPoint(name){
+    if(!name || !drawing.points[name]) return;
+    const usedByEntity=drawing.entities.some(ent=>ent.type==='line' && (ent.from===name || ent.to===name));
+    const usedByDimension=drawing.dimensions.some(dim=>dim.type==='named' && (dim.from===name || dim.to===name));
+    if(!usedByEntity && !usedByDimension) delete drawing.points[name];
+  }
+
   function deleteSelection(){
     if(selectedDimension!==null){
       snapshot();
@@ -543,9 +550,15 @@
       return;
     }
     if(selectedEntity!==null){
+      const ent=drawing.entities[selectedEntity];
       snapshot();
       drawing.entities.splice(selectedEntity,1);
+      if(ent?.type==='line'){
+        cleanupOrphanPoint(ent.from);
+        cleanupOrphanPoint(ent.to);
+      }
       selectedEntity=null;
+      selectedSegment=null;
       render();
       return;
     }
@@ -607,7 +620,10 @@
       }
 
     } else if(ent.type==='line'){
+      const from=ent.from, to=ent.to;
       drawing.entities.splice(entityIndex,1);
+      cleanupOrphanPoint(from);
+      cleanupOrphanPoint(to);
     }
 
     selectedSegment=null;
@@ -720,7 +736,7 @@
     entitiesG.innerHTML=''; labelsG.innerHTML='';
 
     for(const [name,[x,y]] of Object.entries(drawing.points)){
-      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:1.5,class:'point'}));
+      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:0.9,class:'point'}));
       if(drawing.pointLabels && !name.startsWith('_L')){
         const txt=el('text',{x:x+3,y:y-3,class:'label'});
         txt.textContent=`${name} (${x}, ${y})`;
