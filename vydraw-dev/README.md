@@ -1,19 +1,24 @@
-# VyDraw DEV 0.8.0
+# VyDraw DEV 0.9.0
 
 Tiny browser CAD for Sykerbos engineering work.
 
-New in 0.8:
-- top quick-tool bar
-- one-click Line, Square, Circle
-- Dimension selected line/profile segment
-- Delete, Undo, Redo, Fit on the top bar
-- Save Draft / Load Draft in browser local storage
-- advanced command console collapsed out of the way
-- Download review JSON remains available for sharing/review
+New in 0.9 — interactive CAD command line:
+- `LINE` → click first point, then click successive nodes
+- Enter or Space finishes the active line
+- Esc cancels the active drawing command
+- `LINE 100` → each clicked direction creates an exact 100 mm segment
+- `RECT 120 40` → click once to place a 120 × 40 mm rectangle
+- `SQUARE 40` → click once to place a 40 mm square
+- `CIRCLE 20` → click once to place a 20 mm radius circle
+- `DIM` dimensions the currently selected line/segment
+- `DELETE` deletes the selected line/segment
 
-Current limitation:
-- quick Line is fully selectable/movable using the existing line tools
-- Square and Circle are created exactly but direct resize handles are not added yet
-- Save Draft is local to this browser; cloud/Supabase review saving is the next storage step
+Top Line / Square / Circle buttons now activate placement modes.
+
+Existing:
+- drag line = move segment
+- drag green node = shorten / extend / reshape
+- local Save Draft / Load Draft
+- JSON and SVG export
 
 Native units: millimetres.
