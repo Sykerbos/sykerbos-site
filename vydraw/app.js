@@ -13,6 +13,8 @@
   let future = [];
   let view = { x: 0, y: 0, scale: 3 };
   let drag = null;
+  let segmentDrag = null;
+  let selectedSegment = null;
 
   function freshDrawing(){
     return {
@@ -32,6 +34,70 @@
   function restore(serialized){ drawing=JSON.parse(serialized); if(!drawing.currentLayer) drawing.currentLayer='FIXED'; render(); }
   function fmt(n){ return Number(Number(n).toFixed(3)); }
   function layerClass(layer){ return 'layer-' + String(layer||'FIXED').toLowerCase(); }
+
+  function addSegmentVisual(ent, entityIndex, a, b, segmentIndex){
+    const cls='entity '+layerClass(ent.layer)+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
+    entitiesG.appendChild(el('line',{
+      x1:a[0],y1:a[1],x2:b[0],y2:b[1],
+      class:cls
+    }));
+    const hit=el('line',{
+      x1:a[0],y1:a[1],x2:b[0],y2:b[1],
+      class:'segment-hit',
+      'data-entity-index':entityIndex,
+      'data-segment-index':segmentIndex
+    });
+    entitiesG.appendChild(hit);
+  }
+
+  function beginSegmentDrag(e, entityIndex, segmentIndex){
+    const ent=drawing.entities[entityIndex];
+    if(!ent || ent.type!=='polyline') return false;
+    const count=ent.points.length;
+    const i1=segmentIndex;
+    const i2=(segmentIndex+1)%count;
+    if(i1<0 || i1>=count || i2<0 || i2>=count) return false;
+
+    snapshot();
+    selectedSegment={entityIndex,segmentIndex};
+    const a=[...ent.points[i1]], b=[...ent.points[i2]];
+    const horizontal=Math.abs(a[1]-b[1])<0.0001;
+    const vertical=Math.abs(a[0]-b[0])<0.0001;
+    segmentDrag={
+      entityIndex,segmentIndex,i1,i2,
+      startX:e.clientX,startY:e.clientY,
+      a,b,horizontal,vertical
+    };
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('segment-dragging');
+    return true;
+  }
+
+  function moveSegment(e){
+    if(!segmentDrag) return;
+    const ent=drawing.entities[segmentDrag.entityIndex];
+    const dx=(e.clientX-segmentDrag.startX)/view.scale;
+    const dy=-(e.clientY-segmentDrag.startY)/view.scale;
+
+    if(segmentDrag.horizontal){
+      ent.points[segmentDrag.i1]=[segmentDrag.a[0],fmt(segmentDrag.a[1]+dy)];
+      ent.points[segmentDrag.i2]=[segmentDrag.b[0],fmt(segmentDrag.b[1]+dy)];
+    } else if(segmentDrag.vertical){
+      ent.points[segmentDrag.i1]=[fmt(segmentDrag.a[0]+dx),segmentDrag.a[1]];
+      ent.points[segmentDrag.i2]=[fmt(segmentDrag.b[0]+dx),segmentDrag.b[1]];
+    } else {
+      ent.points[segmentDrag.i1]=[fmt(segmentDrag.a[0]+dx),fmt(segmentDrag.a[1]+dy)];
+      ent.points[segmentDrag.i2]=[fmt(segmentDrag.b[0]+dx),fmt(segmentDrag.b[1]+dy)];
+    }
+    render();
+  }
+
+  function endSegmentDrag(){
+    if(!segmentDrag) return;
+    segmentDrag=null;
+    svg.classList.remove('segment-dragging');
+    render();
+  }
 
   function addPoint(name,x,y){ drawing.points[name]=[fmt(x),fmt(y)]; }
   function addLine(a,b){
@@ -186,8 +252,12 @@
       } else if(ent.type==='polygon'){
         e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
       } else if(ent.type==='polyline'){
-        const tag=ent.closed?'polygon':'polyline';
-        e=el(tag,{points:ent.points.map(p=>p.join(',')).join(' '),class:cls});
+        const last=ent.closed?ent.points.length:ent.points.length-1;
+        for(let s=0;s<last;s++){
+          const a=ent.points[s];
+          const b=ent.points[(s+1)%ent.points.length];
+          addSegmentVisual(ent,drawing.entities.indexOf(ent),a,b,s);
+        }
       }
       if(e) entitiesG.appendChild(e);
     });
@@ -219,12 +289,12 @@
     objectList.innerHTML='';
     const rows=[`Active layer: ${drawing.currentLayer}`];
     Object.keys(drawing.points).forEach(k=>rows.push(`Point ${k}`));
-    drawing.entities.forEach((e,i)=>rows.push(`${i+1}. ${e.type}${e.name?` ${e.name}`:''} [${e.layer||'FIXED'}]${e.meta?.shape?` — ${e.meta.shape}`:''}`));
+    drawing.entities.forEach((e,i)=>{ rows.push(`${i+1}. ${e.type}${e.name?` ${e.name}`:''} [${e.layer||'FIXED'}]${e.meta?.shape?` — ${e.meta.shape}`:''}`); if(e.type==='polyline'){ const count=e.closed?e.points.length:e.points.length-1; for(let s=0;s<count;s++) rows.push(`   ${e.name||'POLY'}-S${s+1}`); } });
     drawing.dimensions.forEach(d=>rows.push(d.type==='xy'?'DIMXY':'DIM '+d.from+' → '+d.to));
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Point labels: ${drawing.pointLabels?'ON':'OFF'}`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag a profile segment to move it`;
     updateTransform();
   }
 
@@ -299,16 +369,31 @@
   },{passive:false});
 
   svg.addEventListener('pointerdown',e=>{
+    const hit=e.target.closest && e.target.closest('.segment-hit');
+    if(hit){
+      e.preventDefault();
+      e.stopPropagation();
+      beginSegmentDrag(e,Number(hit.dataset.entityIndex),Number(hit.dataset.segmentIndex));
+      return;
+    }
     drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};
     svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
   });
   svg.addEventListener('pointermove',e=>{
+    if(segmentDrag){ moveSegment(e); return; }
     if(!drag)return;
     view.x=drag.vx+(e.clientX-drag.x);
     view.y=drag.vy+(e.clientY-drag.y);
     updateTransform();
   });
-  svg.addEventListener('pointerup',()=>{drag=null;svg.classList.remove('dragging');});
+  svg.addEventListener('pointerup',()=>{
+    if(segmentDrag){ endSegmentDrag(); return; }
+    drag=null;svg.classList.remove('dragging');
+  });
+  svg.addEventListener('pointercancel',()=>{
+    if(segmentDrag){ endSegmentDrag(); }
+    drag=null;svg.classList.remove('dragging');
+  });
 
   window.addEventListener('resize',updateTransform);
   render();
