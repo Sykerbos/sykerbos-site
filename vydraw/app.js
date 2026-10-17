@@ -1,0 +1,251 @@
+(() => {
+  const svg = document.getElementById('drawing');
+  const viewport = document.getElementById('viewport');
+  const entitiesG = document.getElementById('entities');
+  const labelsG = document.getElementById('labels');
+  const commandInput = document.getElementById('commandInput');
+  const objectList = document.getElementById('objectList');
+  const jsonPreview = document.getElementById('jsonPreview');
+  const gridRect = document.getElementById('gridRect');
+
+  let drawing = freshDrawing();
+  let history = [];
+  let future = [];
+  let view = { x: 0, y: 0, scale: 3 };
+  let drag = null;
+
+  function freshDrawing(){
+    return {units:'mm',partNumber:'VTR-100',revision:'Rev A',points:{},entities:[],dimensions:[]};
+  }
+  function snapshot(){ history.push(JSON.stringify(drawing)); if(history.length>50) history.shift(); future=[]; }
+  function restore(serialized){ drawing=JSON.parse(serialized); render(); }
+  function fmt(n){ return Number(Number(n).toFixed(3)); }
+  function addPoint(name,x,y){ drawing.points[name]=[fmt(x),fmt(y)]; }
+  function addLine(a,b){
+    if(!drawing.points[a] || !drawing.points[b]) throw new Error(`Unknown point: ${!drawing.points[a]?a:b}`);
+    drawing.entities.push({type:'line',from:a,to:b});
+  }
+  function addRect(x,y,w,h){ drawing.entities.push({type:'rect',x:fmt(x),y:fmt(y),width:fmt(w),height:fmt(h)}); }
+  function addCircle(x,y,r){ drawing.entities.push({type:'circle',cx:fmt(x),cy:fmt(y),r:fmt(r)}); }
+  function addHexAF(af){
+    const R=af/Math.sqrt(3), pts=[];
+    for(let i=0;i<6;i++){
+      const angle=(-90+i*60)*Math.PI/180;
+      pts.push([fmt(R*Math.cos(angle)),fmt(R*Math.sin(angle))]);
+    }
+    drawing.entities.push({type:'polygon',points:pts,meta:{shape:'hexagon',acrossFlats:fmt(af)}});
+  }
+  function addDim(a,b){
+    if(!drawing.points[a] || !drawing.points[b]) throw new Error('DIM needs two named points');
+    drawing.dimensions.push({from:a,to:b});
+  }
+
+  function executeSingle(cmd){
+    const t=cmd.trim().split(/\s+/);
+    const op=t[0].toUpperCase();
+
+    if(op==='POINT'){
+      if(t.length!==4) throw new Error('POINT name x y');
+      addPoint(t[1],Number(t[2]),Number(t[3]));
+
+    } else if(op==='LINE'){
+      const assigned=cmd.match(/^LINE\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)\s+\w+=\(\s*(-?\d*\.?\d+)\s*,\s*(-?\d*\.?\d+)\s*\)$/i);
+      if(assigned){
+        const n=drawing.entities.length+Object.keys(drawing.points).length;
+        const a=`_L${n}A`, b=`_L${n}B`;
+        addPoint(a,Number(assigned[1]),Number(assigned[2]));
+        addPoint(b,Number(assigned[3]),Number(assigned[4]));
+        addLine(a,b);
+      } else if(t.length===5 && t.slice(1).every(v=>Number.isFinite(Number(v)))){
+        const n=drawing.entities.length+Object.keys(drawing.points).length;
+        const a=`_L${n}A`, b=`_L${n}B`;
+        addPoint(a,Number(t[1]),Number(t[2]));
+        addPoint(b,Number(t[3]),Number(t[4]));
+        addLine(a,b);
+      } else if(t.length===3){
+        addLine(t[1],t[2]);
+      } else {
+        throw new Error('Use LINE A B, LINE 0 0 100 25, or LINE A=(0,0) B=(100,25)');
+      }
+
+    } else if(op==='RECT'){
+      if(t.length!==5) throw new Error('RECT x y width height');
+      addRect(...t.slice(1).map(Number));
+
+    } else if(op==='CIRCLE'){
+      if(t.length!==4) throw new Error('CIRCLE x y radius');
+      addCircle(...t.slice(1).map(Number));
+
+    } else if(op==='HEX'){
+      const afToken=t.find(v=>v.toUpperCase().startsWith('AF='));
+      if(!afToken) throw new Error('HEX AF=200');
+      addHexAF(Number(afToken.split('=')[1]));
+
+    } else if(op==='DIM'){
+      if(t.length!==3) throw new Error('DIM pointA pointB');
+      addDim(t[1],t[2]);
+
+    } else if(op==='CLEAR'){
+      drawing=freshDrawing();
+
+    } else {
+      throw new Error(`Unknown command: ${op}`);
+    }
+  }
+
+  function execute(raw){
+    const lines=raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    if(!lines.length) return;
+    snapshot();
+    try{
+      for(const line of lines) executeSingle(line);
+      render();
+    }catch(err){
+      const prev=history.pop();
+      if(prev) drawing=JSON.parse(prev);
+      render();
+      throw err;
+    }
+  }
+
+  function el(name,attrs={}){
+    const e=document.createElementNS('http://www.w3.org/2000/svg',name);
+    for(const [k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+    return e;
+  }
+
+  function render(){
+    entitiesG.innerHTML=''; labelsG.innerHTML='';
+
+    for(const [name,[x,y]] of Object.entries(drawing.points)){
+      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:2.2,class:'point'}));
+      const txt=el('text',{x:x+4,y:y-4,class:'label'});
+      txt.textContent=`${name} (${x}, ${y})`;
+      labelsG.appendChild(txt);
+    }
+
+    drawing.entities.forEach(ent=>{
+      let e;
+      if(ent.type==='line'){
+        const a=drawing.points[ent.from], b=drawing.points[ent.to];
+        e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'entity'});
+      } else if(ent.type==='rect'){
+        e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:'entity'});
+      } else if(ent.type==='circle'){
+        e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:'entity'});
+      } else if(ent.type==='polygon'){
+        e=el('polygon',{points:ent.points.map(p=>p.join(',')).join(' '),class:'entity'});
+      }
+      if(e) entitiesG.appendChild(e);
+    });
+
+    drawing.dimensions.forEach(dim=>{
+      const a=drawing.points[dim.from], b=drawing.points[dim.to];
+      labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:'dimension'}));
+      const d=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const tx=(a[0]+b[0])/2, ty=(a[1]+b[1])/2-4;
+      const txt=el('text',{x:tx,y:ty,class:'dimtext'});
+      txt.textContent=`${fmt(d)} mm`;
+      labelsG.appendChild(txt);
+    });
+
+    drawing.partNumber=document.getElementById('partNumber').value;
+    drawing.revision=document.getElementById('revision').value;
+    jsonPreview.textContent=JSON.stringify(drawing,null,2);
+
+    objectList.innerHTML='';
+    const rows=[];
+    Object.keys(drawing.points).forEach(k=>rows.push(`Point ${k}`));
+    drawing.entities.forEach((e,i)=>rows.push(`${i+1}. ${e.type}${e.meta?.shape?` — ${e.meta.shape}`:''}`));
+    drawing.dimensions.forEach(d=>rows.push(`DIM ${d.from} → ${d.to}`));
+    if(!rows.length) rows.push('No objects yet.');
+    rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
+
+    updateTransform();
+  }
+
+  function updateTransform(){
+    const cx=svg.clientWidth/2, cy=svg.clientHeight/2;
+    viewport.setAttribute('transform',`translate(${cx+view.x} ${cy+view.y}) scale(${view.scale} ${-view.scale})`);
+    labelsG.querySelectorAll('text').forEach(t=>{
+      t.setAttribute('transform',`scale(1,-1) translate(0,${-2*Number(t.getAttribute('y')||0)})`);
+    });
+  }
+
+  function fitView(){
+    const box=entitiesG.getBBox();
+    if(!isFinite(box.width) || (box.width===0 && box.height===0)){ view={x:0,y:0,scale:3}; updateTransform(); return; }
+    const sx=(svg.clientWidth-100)/(box.width||1), sy=(svg.clientHeight-100)/(box.height||1);
+    view.scale=Math.max(.1,Math.min(20,Math.min(sx,sy)));
+    view.x=-(box.x+box.width/2)*view.scale;
+    view.y=(box.y+box.height/2)*view.scale;
+    updateTransform();
+  }
+
+  function download(name,text,type){
+    const blob=new Blob([text],{type});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+
+  function exportSVG(){
+    const clone=svg.cloneNode(true);
+    const bbox=entitiesG.getBBox(), pad=20;
+    clone.setAttribute('viewBox',`${bbox.x-pad} ${bbox.y-pad} ${Math.max(1,bbox.width+2*pad)} ${Math.max(1,bbox.height+2*pad)}`);
+    clone.setAttribute('width',`${Math.max(1,bbox.width+2*pad)}mm`);
+    clone.setAttribute('height',`${Math.max(1,bbox.height+2*pad)}mm`);
+    clone.querySelector('#viewport').removeAttribute('transform');
+    const gr=clone.querySelector('#gridRect'); if(gr) gr.remove();
+    const axes=clone.querySelector('#axes'); if(axes) axes.remove();
+    download(`${drawing.partNumber}_${drawing.revision.replace(/\s+/g,'-')}.svg`,
+      new XMLSerializer().serializeToString(clone),'image/svg+xml');
+  }
+
+  document.getElementById('runCommand').onclick=()=>{
+    try{execute(commandInput.value);commandInput.value='';}
+    catch(e){alert(e.message);}
+  };
+  commandInput.addEventListener('keydown',e=>{
+    if((e.ctrlKey || e.metaKey) && e.key==='Enter'){
+      e.preventDefault();
+      document.getElementById('runCommand').click();
+    }
+  });
+
+  document.getElementById('demoHex').onclick=()=>{ snapshot(); drawing=freshDrawing(); addHexAF(200); render(); fitView(); };
+  document.getElementById('fitView').onclick=fitView;
+  document.getElementById('toggleGrid').onclick=()=>{ gridRect.style.display=gridRect.style.display==='none'?'':'none'; };
+  document.getElementById('undoBtn').onclick=()=>{ if(!history.length)return; future.push(JSON.stringify(drawing)); restore(history.pop()); };
+  document.getElementById('redoBtn').onclick=()=>{ if(!future.length)return; history.push(JSON.stringify(drawing)); restore(future.pop()); };
+  document.getElementById('exportSvg').onclick=exportSVG;
+  document.getElementById('exportJson').onclick=()=>{
+    drawing.partNumber=document.getElementById('partNumber').value;
+    drawing.revision=document.getElementById('revision').value;
+    download(`${drawing.partNumber}_${drawing.revision.replace(/\s+/g,'-')}.json`,JSON.stringify(drawing,null,2),'application/json');
+  };
+
+  ['partNumber','revision'].forEach(id=>document.getElementById(id).addEventListener('input',render));
+
+  svg.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const factor=e.deltaY<0?1.12:0.89;
+    view.scale=Math.max(.05,Math.min(50,view.scale*factor));
+    updateTransform();
+  },{passive:false});
+
+  svg.addEventListener('pointerdown',e=>{
+    drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};
+    svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    view.x=drag.vx+(e.clientX-drag.x);
+    view.y=drag.vy+(e.clientY-drag.y);
+    updateTransform();
+  });
+  svg.addEventListener('pointerup',()=>{drag=null;svg.classList.remove('dragging');});
+
+  window.addEventListener('resize',updateTransform);
+  render();
+})();
