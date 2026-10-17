@@ -49,7 +49,7 @@ textarea{font:inherit;border-radius:6px;border:1px solid #343c44;background:#101
 #drawing.segment-dragging{cursor:move}
 
 .vertex-handle{fill:#7fbf8a;stroke:#0f1215;stroke-width:1;vector-effect:non-scaling-stroke;cursor:crosshair}
-.vertex-handle:hover{r:3}
+.vertex-handle:hover,.shape-handle:hover,.line-end-handle:hover{r:1.8}
 #drawing.vertex-dragging{cursor:crosshair}
 
 .danger{grid-column:1/-1;border-color:#6d4444}
