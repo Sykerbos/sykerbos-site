@@ -1,4 +1,4 @@
-# VyDraw DEV 1.0.0
+# VyDraw DEV 1.0.1
 
 Tiny browser CAD for Sykerbos engineering work.
 
@@ -21,3 +21,7 @@ Existing CAD commands:
 - DELETE
 
 Native units: millimetres.
+
+
+Fix in 1.0.1:
+- rectangle/circle visible geometry no longer blocks the invisible selection hit area, so clicking shapes should select them and reveal edit handles.
