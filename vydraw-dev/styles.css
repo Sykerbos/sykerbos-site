@@ -76,3 +76,5 @@ main{min-height:0}
 #drawing.move-armed{cursor:move}
 #drawing.object-moving{cursor:move}
 #drawing.shape-editing{cursor:crosshair}
+
+.shape-entity{pointer-events:none}
