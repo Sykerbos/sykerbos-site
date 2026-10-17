@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 1.0.0';
+  const BUILD='DEV 1.1.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -20,6 +20,7 @@
   let vertexDrag = null;
   let selectedSegment = null;
   let selectedEntity = null;
+  let selectedDimension = null;
   let drawMode = null;
   let objectMove = null;
   let shapeHandleDrag = null;
@@ -126,13 +127,16 @@
     } else if(op==='DIM' || op==='DIMENSION'){
       dimensionSelected();
       setCadHint('Dimension added');
-    } else if(op==='DELETE'){
-      deleteSelectedSegment();
-      setCadHint('Selected line deleted');
+    } else if(op==='DELETE' || op==='DEL'){
+      deleteSelection();
+      setCadHint('Selection deleted');
+    } else if(op==='CLEARDIMS' || op==='DELDIMS'){
+      clearDimensions();
+      setCadHint('Dimensions cleared');
     } else if(op==='ESC' || op==='CANCEL'){
       cancelDrawMode();
     } else {
-      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, M/MOVE, DIM, DELETE');
+      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, M/MOVE, DIM, DELETE, CLEARDIMS');
     }
   }
 
@@ -179,6 +183,7 @@
     return false;
   }
   function selectEntity(index){
+    selectedDimension=null;
     selectedEntity=index;
     if(selectedSegment && selectedSegment.entityIndex!==index) selectedSegment=null;
     render();
@@ -356,7 +361,7 @@
     if(!raw){ alert('No saved draft in this browser yet.'); return; }
     snapshot();
     drawing=JSON.parse(raw);
-    selectedEntity=null; selectedSegment=null;
+    selectedEntity=null; selectedSegment=null; selectedDimension=null;
     document.getElementById('partNumber').value=drawing.partNumber||'VTR-100';
     document.getElementById('revision').value=drawing.revision||'Rev A';
     render();
@@ -525,6 +530,34 @@
     drawing.dimensions.push({type:'xy',a:[fmt(x1),fmt(y1)],b:[fmt(x2),fmt(y2)],offset:fmt(offset),layer:'DIMENSION'});
   }
 
+  function deleteSelection(){
+    if(selectedDimension!==null){
+      snapshot();
+      drawing.dimensions.splice(selectedDimension,1);
+      selectedDimension=null;
+      render();
+      return;
+    }
+    if(selectedSegment){
+      deleteSelectedSegment();
+      return;
+    }
+    if(selectedEntity!==null){
+      snapshot();
+      drawing.entities.splice(selectedEntity,1);
+      selectedEntity=null;
+      render();
+      return;
+    }
+  }
+
+  function clearDimensions(){
+    if(!drawing.dimensions.length) return;
+    snapshot();
+    drawing.dimensions=[];
+    selectedDimension=null;
+    render();
+  }
   function deleteSelectedSegment(){
     if(!selectedSegment) return;
     const {entityIndex,segmentIndex}=selectedSegment;
@@ -578,6 +611,7 @@
     }
 
     selectedSegment=null;
+    selectedEntity=null;
     render();
   }
 
@@ -731,9 +765,10 @@
 
     drawing.entities.forEach((ent,i)=>{ addVertexHandles(ent,i); addShapeHandles(ent,i); });
 
-    drawing.dimensions.forEach(dim=>{
+    drawing.dimensions.forEach((dim,dimIndex)=>{
       const a=dim.type==='xy'?dim.a:drawing.points[dim.from];
       const b=dim.type==='xy'?dim.b:drawing.points[dim.to];
+      if(!a || !b) return;
       const dx=b[0]-a[0], dy=b[1]-a[1];
       const d=Math.hypot(dx,dy);
       if(!d) return;
@@ -741,12 +776,14 @@
       const nx=-dy/d, ny=dx/d;
       const da=[a[0]+nx*offset,a[1]+ny*offset];
       const db=[b[0]+nx*offset,b[1]+ny*offset];
-      labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:da[0],y2:da[1],class:'extension'}));
-      labelsG.appendChild(el('line',{x1:b[0],y1:b[1],x2:db[0],y2:db[1],class:'extension'}));
-      labelsG.appendChild(el('line',{x1:da[0],y1:da[1],x2:db[0],y2:db[1],class:'dimension'}));
+      const selected=selectedDimension===dimIndex?' selected-dimension':'';
+      labelsG.appendChild(el('line',{x1:a[0],y1:a[1],x2:da[0],y2:da[1],class:'extension'+selected}));
+      labelsG.appendChild(el('line',{x1:b[0],y1:b[1],x2:db[0],y2:db[1],class:'extension'+selected}));
+      labelsG.appendChild(el('line',{x1:da[0],y1:da[1],x2:db[0],y2:db[1],class:'dimension'+selected}));
+      labelsG.appendChild(el('line',{x1:da[0],y1:da[1],x2:db[0],y2:db[1],class:'dimension-hit','data-dimension-index':dimIndex}));
       const tx=(da[0]+db[0])/2 + nx*3;
       const ty=(da[1]+db[1])/2 + ny*3;
-      const txt=el('text',{x:tx,y:ty,class:'dimtext'});
+      const txt=el('text',{x:tx,y:ty,class:'dimtext'+selected,'data-dimension-index':dimIndex});
       txt.textContent=`${fmt(d)} mm`;
       labelsG.appendChild(txt);
     });
@@ -845,6 +882,16 @@
       return;
     }
 
+    const dimHit=e.target.closest && e.target.closest('.dimension-hit');
+    const dimText=e.target.closest && e.target.closest('.dimtext');
+    if(dimHit || dimText){
+      e.preventDefault(); e.stopPropagation();
+      selectedDimension=Number((dimHit||dimText).dataset.dimensionIndex);
+      selectedEntity=null; selectedSegment=null;
+      render();
+      return;
+    }
+
     const shapeHandle=e.target.closest && e.target.closest('.shape-handle');
     if(shapeHandle){
       e.preventDefault(); e.stopPropagation();
@@ -892,6 +939,7 @@
     if(hit){
       e.preventDefault();
       e.stopPropagation();
+      selectedDimension=null;
       selectedEntity=Number(hit.dataset.entityIndex);
       beginSegmentDrag(e,Number(hit.dataset.entityIndex),Number(hit.dataset.segmentIndex));
       return;
@@ -938,7 +986,8 @@
   document.getElementById('toolCircle')?.addEventListener('click',()=>{ setCadCommand('CIRCLE 20'); startCircleMode(20); });
   document.getElementById('moveSelected')?.addEventListener('click',()=>{ setCadCommand('M'); armMove(); });
   document.getElementById('dimensionSelected')?.addEventListener('click',dimensionSelected);
-  document.getElementById('deleteSelectedTop')?.addEventListener('click',deleteSelectedSegment);
+  document.getElementById('deleteSelectedTop')?.addEventListener('click',deleteSelection);
+  document.getElementById('clearDimensions')?.addEventListener('click',clearDimensions);
   document.getElementById('undoTop')?.addEventListener('click',()=>document.getElementById('undoBtn').click());
   document.getElementById('redoTop')?.addEventListener('click',()=>document.getElementById('redoBtn').click());
   document.getElementById('fitTop')?.addEventListener('click',fitView);
@@ -963,7 +1012,7 @@
     });
   }
   const deleteBtn=document.getElementById('deleteSelected');
-  if(deleteBtn) deleteBtn.onclick=deleteSelectedSegment;
+  if(deleteBtn) deleteBtn.onclick=deleteSelection;
 
   document.addEventListener('keydown',e=>{
     const tag=(document.activeElement?.tagName||'').toUpperCase();
@@ -979,9 +1028,9 @@
       cancelDrawMode();
       return;
     }
-    if(!editing && (e.key==='Delete' || e.key==='Backspace') && selectedSegment){
+    if(!editing && (e.key==='Delete' || e.key==='Backspace') && (selectedSegment || selectedEntity!==null || selectedDimension!==null)){
       e.preventDefault();
-      deleteSelectedSegment();
+      deleteSelection();
     }
   });
 
