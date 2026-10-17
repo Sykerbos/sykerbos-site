@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 1.2.0';
+  const BUILD='DEV 1.3.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -26,6 +26,7 @@
   let drawMode = null;
   let objectMove = null;
   let shapeHandleDrag = null;
+  let interactionMode = 'select';
 
   function freshDrawing(){
     return {
@@ -42,7 +43,7 @@
   }
 
   function snapshot(){ history.push(JSON.stringify(drawing)); if(history.length>50) history.shift(); future=[]; }
-  function restore(serialized){ drawing=JSON.parse(serialized); if(!drawing.currentLayer) drawing.currentLayer='FIXED'; render(); }
+  function restore(serialized){ drawing=JSON.parse(serialized); if(!drawing.currentLayer) drawing.currentLayer='FIXED'; cleanupLegacyAutoPoints(); render(); }
   function fmt(n){ return Number(Number(n).toFixed(3)); }
   function layerClass(layer){ return 'layer-' + String(layer||'FIXED').toLowerCase(); }
 
@@ -67,6 +68,34 @@
   function setCadCommand(text){
     const input=document.getElementById('cadCommand');
     if(input) input.value=text;
+  }
+
+  function setInteractionMode(mode){
+    interactionMode=mode;
+    svg.classList.toggle('select-mode',mode==='select');
+    svg.classList.toggle('pan-mode',mode==='pan');
+    document.getElementById('toolSelect')?.classList.toggle('active-tool',mode==='select');
+    document.getElementById('toolPan')?.classList.toggle('active-tool',mode==='pan');
+    setCadHint(mode==='select' ? 'SELECT — drag a window or click an object' : 'PAN — drag empty canvas to move view');
+  }
+
+  function cleanupLegacyAutoPoints(){
+    const used=new Set();
+    drawing.entities.forEach(ent=>{
+      if(ent.type==='line'){
+        used.add(ent.from);
+        used.add(ent.to);
+      }
+    });
+    drawing.dimensions.forEach(dim=>{
+      if(dim.type==='named'){
+        used.add(dim.from);
+        used.add(dim.to);
+      }
+    });
+    Object.keys(drawing.points).forEach(name=>{
+      if(name.startsWith('_L') && !used.has(name)) delete drawing.points[name];
+    });
   }
 
   function finishDrawMode(){
@@ -124,6 +153,10 @@
     } else if(op==='CIRCLE'){
       if(t.length===2) startCircleMode(Number(t[1]));
       else alert('Use CIRCLE radius, e.g. CIRCLE 20');
+    } else if(op==='SELECT' || op==='SEL'){
+      setInteractionMode('select');
+    } else if(op==='PAN' || op==='P'){
+      setInteractionMode('pan');
     } else if(op==='MOVE' || op==='M'){
       armMove();
     } else if(op==='DIM' || op==='DIMENSION'){
@@ -138,7 +171,7 @@
     } else if(op==='ESC' || op==='CANCEL'){
       cancelDrawMode();
     } else {
-      alert('Commands: LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, M/MOVE, DIM, DELETE, CLEARDIMS');
+      alert('Commands: SELECT, PAN, LINE, LINE 100, RECT 120 40, SQUARE 40, CIRCLE 20, M/MOVE, DIM, DELETE, CLEARDIMS');
     }
   }
 
@@ -447,7 +480,8 @@
     if(!raw){ alert('No saved draft in this browser yet.'); return; }
     snapshot();
     drawing=JSON.parse(raw);
-    selectedEntity=null; selectedSegment=null; selectedDimension=null;
+    cleanupLegacyAutoPoints();
+    selectedEntity=null; selectedEntities.clear(); selectedSegment=null; selectedDimension=null;
     document.getElementById('partNumber').value=drawing.partNumber||'VTR-100';
     document.getElementById('revision').value=drawing.revision||'Rev A';
     render();
@@ -821,10 +855,11 @@
   }
 
   function render(){
+    cleanupLegacyAutoPoints();
     entitiesG.innerHTML=''; labelsG.innerHTML='';
 
     for(const [name,[x,y]] of Object.entries(drawing.points)){
-      entitiesG.appendChild(el('circle',{cx:x,cy:y,r:0.9,class:'point'}));
+      if(!name.startsWith('_L')) entitiesG.appendChild(el('circle',{cx:x,cy:y,r:0.9,class:'point'}));
       if(drawing.pointLabels && !name.startsWith('_L')){
         const txt=el('text',{x:x+3,y:y-3,class:'label'});
         txt.textContent=`${name} (${x}, ${y})`;
@@ -904,7 +939,7 @@
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Left-drag = select • Middle-drag = pan • Wheel = zoom • Drag node = reshape`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Tool: ${interactionMode.toUpperCase()} • Wheel = zoom • Middle-drag = temporary pan • Drag node = reshape`;
     updateTransform();
   }
 
@@ -1057,7 +1092,13 @@
       beginSegmentDrag(e,Number(hit.dataset.entityIndex),Number(hit.dataset.segmentIndex));
       return;
     }
-    beginSelectionDrag(e);
+    if(interactionMode==='select'){
+      beginSelectionDrag(e);
+    } else {
+      drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y,pointerId:e.pointerId};
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add('dragging');
+    }
   });
   svg.addEventListener('pointermove',e=>{
     if(objectMove){ moveObject(e); return; }
@@ -1096,6 +1137,8 @@
     drag=null;svg.classList.remove('dragging');
   });
 
+  document.getElementById('toolSelect')?.addEventListener('click',()=>{ setCadCommand('SELECT'); setInteractionMode('select'); });
+  document.getElementById('toolPan')?.addEventListener('click',()=>{ setCadCommand('PAN'); setInteractionMode('pan'); });
   document.getElementById('toolLine')?.addEventListener('click',()=>{ setCadCommand('LINE'); startLineMode(null); });
   document.getElementById('toolSquare')?.addEventListener('click',()=>{ setCadCommand('SQUARE 40'); startRectMode(40,40); });
   document.getElementById('toolCircle')?.addEventListener('click',()=>{ setCadCommand('CIRCLE 20'); startCircleMode(20); });
@@ -1150,5 +1193,6 @@
   });
 
   window.addEventListener('resize',updateTransform);
+  setInteractionMode('select');
   render();
 })();
