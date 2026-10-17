@@ -1,5 +1,5 @@
 (() => {
-  const BUILD='DEV 1.1.1';
+  const BUILD='DEV 1.2.0';
   const runtimeVersion=document.getElementById('runtimeVersion');
   if(runtimeVersion) runtimeVersion.textContent=BUILD;
   const svg = document.getElementById('drawing');
@@ -16,6 +16,8 @@
   let future = [];
   let view = { x: 0, y: 0, scale: 3 };
   let drag = null;
+  let selectionDrag = null;
+  let selectedEntities = new Set();
   let segmentDrag = null;
   let vertexDrag = null;
   let selectedSegment = null;
@@ -182,10 +184,94 @@
     }
     return false;
   }
+  function clearEntitySelection(){
+    selectedEntity=null;
+    selectedEntities.clear();
+  }
+
+  function isEntitySelected(index){
+    return selectedEntity===index || selectedEntities.has(index);
+  }
+
   function selectEntity(index){
     selectedDimension=null;
+    selectedEntities.clear();
     selectedEntity=index;
     if(selectedSegment && selectedSegment.entityIndex!==index) selectedSegment=null;
+    render();
+  }
+
+  function entityBounds(ent){
+    if(ent.type==='line'){
+      const a=drawing.points[ent.from], b=drawing.points[ent.to];
+      if(!a || !b) return null;
+      return {minX:Math.min(a[0],b[0]),maxX:Math.max(a[0],b[0]),minY:Math.min(a[1],b[1]),maxY:Math.max(a[1],b[1])};
+    }
+    if(ent.type==='rect') return {minX:ent.x,maxX:ent.x+ent.width,minY:ent.y,maxY:ent.y+ent.height};
+    if(ent.type==='circle') return {minX:ent.cx-ent.r,maxX:ent.cx+ent.r,minY:ent.cy-ent.r,maxY:ent.cy+ent.r};
+    if(ent.type==='polyline' || ent.type==='polygon'){
+      if(!ent.points?.length) return null;
+      const xs=ent.points.map(p=>p[0]), ys=ent.points.map(p=>p[1]);
+      return {minX:Math.min(...xs),maxX:Math.max(...xs),minY:Math.min(...ys),maxY:Math.max(...ys)};
+    }
+    return null;
+  }
+
+  function beginSelectionDrag(e){
+    const p=screenToWorld(e);
+    selectionDrag={pointerId:e.pointerId,start:[...p],current:[...p]};
+    clearEntitySelection();
+    selectedSegment=null;
+    selectedDimension=null;
+    svg.setPointerCapture(e.pointerId);
+    svg.classList.add('selecting');
+    updateSelectionBox();
+  }
+
+  function updateSelectionBox(){
+    let box=viewport.querySelector('#selectionBox');
+    if(!selectionDrag){
+      if(box) box.remove();
+      return;
+    }
+    const x1=selectionDrag.start[0], y1=selectionDrag.start[1];
+    const x2=selectionDrag.current[0], y2=selectionDrag.current[1];
+    const x=Math.min(x1,x2), y=Math.min(y1,y2);
+    if(!box){
+      box=el('rect',{id:'selectionBox',class:'selection-box'});
+      viewport.appendChild(box);
+    }
+    box.setAttribute('x',x);
+    box.setAttribute('y',y);
+    box.setAttribute('width',Math.abs(x2-x1));
+    box.setAttribute('height',Math.abs(y2-y1));
+    box.classList.toggle('crossing',x2<x1);
+  }
+
+  function finishSelectionDrag(){
+    if(!selectionDrag) return;
+    const x1=selectionDrag.start[0], y1=selectionDrag.start[1];
+    const x2=selectionDrag.current[0], y2=selectionDrag.current[1];
+    const minX=Math.min(x1,x2), maxX=Math.max(x1,x2);
+    const minY=Math.min(y1,y2), maxY=Math.max(y1,y2);
+    const crossing=x2<x1;
+    const picked=[];
+    if(Math.abs(x2-x1)>0.5 || Math.abs(y2-y1)>0.5){
+      drawing.entities.forEach((ent,i)=>{
+        const b=entityBounds(ent);
+        if(!b) return;
+        const contained=b.minX>=minX && b.maxX<=maxX && b.minY>=minY && b.maxY<=maxY;
+        const intersects=!(b.maxX<minX || b.minX>maxX || b.maxY<minY || b.minY>maxY);
+        if(crossing ? intersects : contained) picked.push(i);
+      });
+    }
+    selectionDrag=null;
+    updateSelectionBox();
+    svg.classList.remove('selecting');
+    selectedEntities=new Set(picked);
+    selectedEntity=picked.length===1 ? picked[0] : null;
+    if(picked.length===1) selectedEntities.clear();
+    setCadHint(picked.length ? (picked.length+' object'+(picked.length===1?'':'s')+' selected') : 'Ready');
     render();
   }
 
@@ -285,7 +371,7 @@
   }
 
   function armMove(){
-    if(selectedEntity===null){ alert('Select an object first, then use M or MOVE.'); return; }
+    if(selectedEntity===null){ if(selectedEntities.size>1) alert('MOVE currently works on one object at a time. Click one object first.'); else alert('Select an object first, then use M or MOVE.'); return; }
     setCadHint('MOVE — drag the selected object freely');
     svg.classList.add('move-armed');
   }
@@ -369,7 +455,7 @@
   }
 
   function addSegmentVisual(ent, entityIndex, a, b, segmentIndex){
-    const cls='entity '+layerClass(ent.layer)+(selectedEntity===entityIndex?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
+    const cls='entity '+layerClass(ent.layer)+(isEntitySelected(entityIndex)?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===entityIndex && selectedSegment.segmentIndex===segmentIndex?' selected-segment':'');
     entitiesG.appendChild(el('line',{
       x1:a[0],y1:a[1],x2:b[0],y2:b[1],
       class:cls
@@ -549,15 +635,17 @@
       deleteSelectedSegment();
       return;
     }
-    if(selectedEntity!==null){
-      const ent=drawing.entities[selectedEntity];
+    if(selectedEntities.size || selectedEntity!==null){
+      const indices=selectedEntities.size ? [...selectedEntities].sort((a,b)=>b-a) : [selectedEntity];
       snapshot();
-      drawing.entities.splice(selectedEntity,1);
-      if(ent?.type==='line'){
-        cleanupOrphanPoint(ent.from);
-        cleanupOrphanPoint(ent.to);
-      }
-      selectedEntity=null;
+      const removedLines=[];
+      indices.forEach(index=>{
+        const ent=drawing.entities[index];
+        if(ent?.type==='line') removedLines.push([ent.from,ent.to]);
+        drawing.entities.splice(index,1);
+      });
+      removedLines.flat().forEach(cleanupOrphanPoint);
+      clearEntitySelection();
       selectedSegment=null;
       render();
       return;
@@ -749,7 +837,7 @@
       const cls=`entity ${layerClass(ent.layer)}`;
       if(ent.type==='line'){
         const a=drawing.points[ent.from], b=drawing.points[ent.to];
-        const lineCls=cls+(selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===drawing.entities.indexOf(ent)?' selected-segment':'');
+        const lineCls=cls+(isEntitySelected(drawing.entities.indexOf(ent))?' selected-object':'')+(selectedSegment && selectedSegment.entityIndex===drawing.entities.indexOf(ent)?' selected-segment':'');
         e=el('line',{x1:a[0],y1:a[1],x2:b[0],y2:b[1],class:lineCls});
         const hit=el('line',{
           x1:a[0],y1:a[1],x2:b[0],y2:b[1],
@@ -759,11 +847,11 @@
         });
         entitiesG.appendChild(hit);
       } else if(ent.type==='rect'){
-        const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
+        const sel=isEntitySelected(drawing.entities.indexOf(ent))?' selected-object':'';
         e=el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:cls+sel+' shape-entity'});
         entitiesG.appendChild(el('rect',{x:ent.x,y:ent.y,width:ent.width,height:ent.height,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='circle'){
-        const sel=selectedEntity===drawing.entities.indexOf(ent)?' selected-object':'';
+        const sel=isEntitySelected(drawing.entities.indexOf(ent))?' selected-object':'';
         e=el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:cls+sel+' shape-entity'});
         entitiesG.appendChild(el('circle',{cx:ent.cx,cy:ent.cy,r:ent.r,class:'object-hit','data-entity-index':drawing.entities.indexOf(ent)}));
       } else if(ent.type==='polygon'){
@@ -816,7 +904,7 @@
     if(rows.length===1) rows.push('No objects yet.');
     rows.forEach(r=>{const d=document.createElement('div');d.className='obj';d.textContent=r;objectList.appendChild(d);});
 
-    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Drag line = move • Drag green node = reshape • Command line at bottom`;
+    document.getElementById('status').textContent=`Origin (0,0) • Units: mm • Layer: ${drawing.currentLayer} • Left-drag = select • Middle-drag = pan • Wheel = zoom • Drag node = reshape`;
     updateTransform();
   }
 
@@ -891,6 +979,15 @@
   },{passive:false});
 
   svg.addEventListener('pointerdown',e=>{
+    if(e.button===1 && !drawMode){
+      e.preventDefault();
+      drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y,pointerId:e.pointerId};
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add('dragging');
+      return;
+    }
+    if(e.button!==0) return;
+
     if(drawMode){
       e.preventDefault();
       e.stopPropagation();
@@ -960,8 +1057,7 @@
       beginSegmentDrag(e,Number(hit.dataset.entityIndex),Number(hit.dataset.segmentIndex));
       return;
     }
-    drag={x:e.clientX,y:e.clientY,vx:view.x,vy:view.y};
-    svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
+    beginSelectionDrag(e);
   });
   svg.addEventListener('pointermove',e=>{
     if(objectMove){ moveObject(e); return; }
@@ -977,6 +1073,7 @@
     }
     if(vertexDrag){ moveVertex(e); return; }
     if(segmentDrag){ moveSegment(e); return; }
+    if(selectionDrag){ selectionDrag.current=screenToWorld(e); updateSelectionBox(); return; }
     if(!drag)return;
     view.x=drag.vx+(e.clientX-drag.x);
     view.y=drag.vy+(e.clientY-drag.y);
@@ -987,6 +1084,7 @@
     if(shapeHandleDrag){ endShapeHandleDrag(); return; }
     if(vertexDrag){ endVertexDrag(); return; }
     if(segmentDrag){ endSegmentDrag(); return; }
+    if(selectionDrag){ finishSelectionDrag(); return; }
     drag=null;svg.classList.remove('dragging');
   });
   svg.addEventListener('pointercancel',()=>{
@@ -994,6 +1092,7 @@
     if(shapeHandleDrag){ endShapeHandleDrag(); }
     if(vertexDrag){ endVertexDrag(); }
     if(segmentDrag){ endSegmentDrag(); }
+    if(selectionDrag){ selectionDrag=null; updateSelectionBox(); svg.classList.remove('selecting'); }
     drag=null;svg.classList.remove('dragging');
   });
 
@@ -1044,7 +1143,7 @@
       cancelDrawMode();
       return;
     }
-    if(!editing && (e.key==='Delete' || e.key==='Backspace') && (selectedSegment || selectedEntity!==null || selectedDimension!==null)){
+    if(!editing && (e.key==='Delete' || e.key==='Backspace') && (selectedSegment || selectedEntity!==null || selectedEntities.size || selectedDimension!==null)){
       e.preventDefault();
       deleteSelection();
     }
