@@ -31,5 +31,5 @@ Authentication/pairing and any existing endpoint configuration must be reviewed 
 Suggested gain is max(0, saved wet reference - planning weight). A manual target can override that amount.
 A scenario's retained target is capped at the wet reference; excess is flagged as possible runoff.
 Days are reserve above the saved dry reference divided by an explicitly displayed daily-loss assumption.
-The initial assumption fits at least six hours of recent, uninterrupted active-run dry-down. It excludes clear jumps and is not a validated post-irrigation or holiday forecast.
+The orange/citrus model starts at its highest assumed stage, 14 g/day (existing experimental stages: 14, 8, 6, 3). It never uses a recent low-use tail as a post-watering forecast. Plants without a high-use model require a manual rate; the basil demo uses an illustrative 18.6 g/day. The rate remains editable and days are estimates, not a validated holiday forecast.
 The page does not write plant thresholds, telemetry, or watering events to the database.

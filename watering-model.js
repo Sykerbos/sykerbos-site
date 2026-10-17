@@ -6,20 +6,11 @@ export function waterPlan({current,addition,dry,wet,rate}){
   const retainedTarget=target!==null&&valid?Math.min(target,hi):null;
   return {target,suggested:mass!==null&&valid?Math.max(0,hi-mass):null,overWet:target!==null&&valid?Math.max(0,target-hi):0,reserve:retainedTarget!==null?Math.max(0,retainedTarget-lo):null,days:retainedTarget!==null&&loss!==null&&loss>0?Math.max(0,retainedTarget-lo)/loss:null};
 }
-export function recentLossRate(rows){
-  const values=(rows||[]).map(r=>({t:Date.parse(r.measured_at||r.created_at),w:numberOrNull(r.weight_g)})).filter(r=>Number.isFinite(r.t)&&r.w!==null).sort((a,b)=>a.t-b.t);
-  if(!values.length)return null;
-  const end=values.at(-1).t;
-  let pts=values.filter(r=>r.t>=end-12*3600000);
-  // Do not fit across a clear watering or handling jump.
-  let start=0;for(let i=1;i<pts.length;i++)if(Math.abs(pts[i].w-pts[i-1].w)>5)start=i;
-  pts=pts.slice(start);
-  if(pts.length<6||pts.at(-1).t-pts[0].t<6*3600000)return null;
-  const origin=pts[0].t;
-  const meanT=pts.reduce((n,p)=>n+(p.t-origin)/86400000,0)/pts.length,meanW=pts.reduce((n,p)=>n+p.w,0)/pts.length;
-  const num=pts.reduce((n,p)=>n+((p.t-origin)/86400000-meanT)*(p.w-meanW),0),den=pts.reduce((n,p)=>n+((p.t-origin)/86400000-meanT)**2,0);
-  const loss=den?-num/den:null;
-  return loss!==null&&loss>0?loss:null;
+// Highest stage of the existing experimental orange profile (14 → 8 → 6 → 3).
+// Unknown plants need an explicit assumption rather than a late-cycle measured rate.
+export function assumedHighLossRate(plant){
+  const name=[plant?.common_name,plant?.botanical_name,plant?.nickname].filter(Boolean).join(' ').toLowerCase();
+  return name.includes('orange')||name.includes('citrus')?14:null;
 }
 export function localReadingUrl(value){
   const url=new URL(value);
