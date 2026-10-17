@@ -1,13 +1,18 @@
-# VyDraw 0.3
+# VyDraw 0.4
 
 Internal Sykerbos engineering sketcher.
 
-Supported line syntax:
-- `LINE A B`
-- `LINE 0 0 100 25`
-- `LINE A=(0,0) B=(100,25)`
+New in 0.4:
+- layers with `LAYER name`
+- multi-segment `POLYLINE`
+- `CLOSE` for closed profiles
+- coordinate dimensions with `DIMXY x1 y1 x2 y2`
 
-You can paste multiple commands into the command box and click Run, or use Cmd/Ctrl+Enter.
+Examples:
+- `LAYER REFERENCE`
+- `POLYLINE RAIL 0 0 100 0 100 -45 90 -45 90 -35 10 -35 10 -45 0 -45 CLOSE`
+- `DIMXY 0 0 100 0`
+- `DIMXY 100 0 100 -45`
 
 Native units: millimetres.
 
