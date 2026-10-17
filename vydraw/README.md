@@ -1,18 +1,18 @@
-# VyDraw 0.6.0
+# VyDraw 0.7.0
 
 Internal Sykerbos engineering sketcher.
 
-New in 0.6:
-- every polyline vertex now has a draggable green node
-- drag a green node to shorten, lengthen, or reshape connected lines
-- drag the line itself to move the whole segment
-- Undo reverses either kind of drag
+New in 0.7:
+- click a line/segment to select it
+- selected line highlights
+- press Delete or Backspace to remove it
+- or use the "Delete selected line" button
+- deleting an interior polyline segment splits the profile into two open polylines
+- Undo restores the deleted segment
 
-Interaction:
-- line drag: horizontal lines move vertically; vertical lines move horizontally
-- node drag: endpoint moves freely in X/Y
-
-This makes rough mechanical sketching much faster: move a segment to reposition it, then drag its end nodes to trim or extend it.
+Existing editing:
+- drag line = move segment
+- drag green node = shorten, lengthen, reshape
 
 Native units: millimetres.
 
