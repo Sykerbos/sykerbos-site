@@ -1,6 +1,6 @@
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
-import {plantState} from './plant-state.js?v=1';
+import {plantState} from './plant-state.js?v=2';
 
 const $=s=>document.querySelector(s);
 const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n).toFixed(d):'—';
@@ -60,7 +60,8 @@ function render(){
   $('#plant-weight').textContent=view.latest?fmt(view.latest.w)+' g':'—';
   $('#plant-temperature').textContent=view.latest?fmt(view.latest.temperature_c)+' °C':'—';
   $('#plant-reading-count').textContent=count.toLocaleString();
-  $('#plant-summary').textContent=maintenance?'This tile is in maintenance. Historical readings remain available.':cycle.potRemoved?'The pot appears removed. Reserve estimates are paused.':!view.fresh?'Waiting for a fresh tile reading.':cycle.recent?'Recently watered. Watching the pot settle and begin its next dry-down.':'Following this pot’s measured weight and dry-down.';
+  const summaries={maintenance:'This tile is in maintenance. Historical readings remain available.',removed:'The pot appears removed. Reserve estimates are paused.',stale:'Waiting for a fresh tile reading.',low:'Reserve is low against this pot’s current references. Check the plant before watering.',refill:'Recently watered. Watching the pot settle and begin its next dry-down.',drying:'Following this pot’s measured weight and dry-down.'};
+  $('#plant-summary').textContent=summaries[view.state];
 
   const gauge=$('#radial-gauge');
   gauge.dataset.known=String(view.percent!==null);
@@ -79,13 +80,13 @@ function render(){
   $('#plant-recent-movement-note').textContent='Since the latest refill / handling change';
   $('#plant-projected-days').textContent=view.days===null?'Learning':'~'+fmt(view.days)+' days';
   $('#plant-projected-note').textContent=view.days===null?'Waiting for reliable daily use and references':`${fmt(view.reserve)} g reserve · ${fmt(view.usage.rate)} g/day${view.usage.qualifyingDays<7?' · early estimate':''}`;
-  $('#plant-action-title').textContent=maintenance?'Tile in maintenance.':cycle.potRemoved?'Return the pot.':!view.fresh?'Waiting for a reading.':cycle.recent?'Recently watered.':view.percent!==null&&view.percent<=20?'Check your plant.':'Follow the dry-down.';
-  $('#plant-action-copy').textContent=maintenance?'Historical readings remain available while the tile is in maintenance.':cycle.potRemoved?'Return the pot to resume water reserve and dry-down readings.':!view.fresh?'Reconnect the tile before relying on its current reserve estimate.':cycle.recent?'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.':view.percent!==null&&view.percent<=20?'Reserve is low against the saved references. Check the plant before watering.':'Use the measured trend alongside your plant’s condition. Reserve days are estimates.';
+  $('#plant-action-title').textContent={maintenance:'Tile in maintenance.',removed:'Return the pot.',stale:'Waiting for a reading.',low:'Check your plant.',refill:'Recently watered.',drying:'Follow the dry-down.'}[view.state];
+  $('#plant-action-copy').textContent={maintenance:'Historical readings remain available while the tile is in maintenance.',removed:'Return the pot to resume water reserve and dry-down readings.',stale:'Reconnect the tile before relying on its current reserve estimate.',low:'Reserve is low against the current references. Check the plant before watering, even if a recent refill was detected.',refill:'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.',drying:'Use the measured trend alongside your plant’s condition. Reserve days are estimates.'}[view.state];
 
   $('#plant-intelligence-title').textContent='Learning '+name(plant)+'.';
   $('#plant-intelligence-copy').textContent=`${count.toLocaleString()} readings in ${view.latest?.run_id||'this measurement run'}. Irrigation and handling changes are excluded from daily-use rates.`;
   $('#plant-learning-bar').style.width=Math.min(100,Math.round(segment.length/36*100))+'%';
-  $('#plant-learning-note').textContent=segment.length+' readings in the current uninterrupted dry-down';
+  $('#plant-learning-note').textContent=segment.length+' reading'+(segment.length===1?'':'s')+' in the current uninterrupted dry-down';
   $('#high-use-rate').textContent=view.usage.rate===null?'Learning':fmt(view.usage.rate);
   $('#high-use-days').textContent=String(view.usage.qualifyingDays);
   $('#new-cycle-readings').textContent=String(segment.length);

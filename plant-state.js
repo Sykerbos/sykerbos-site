@@ -13,5 +13,6 @@ export function plantState(plant,readings,{now=Date.now(),maintenance=false}={})
   const reserve=known&&fresh&&!maintenance&&!cycle.potRemoved?Math.min(wet-dry,Math.max(0,latest.w-dry)):null;
   const percent=reserve===null?null:Math.max(0,Math.min(100,reserve/(wet-dry)*100));
   const usage=observedHighUse(rows,{now,dry});
-  return {dry,wet,known,cycle,latest,fresh,maintenance,emptyFloor,potRows,low:recent.length?Math.min(...recent):null,high:recent.length?Math.max(...recent):null,reserve,percent,angle:percent===null?null:225+percent*2.7,usage,days:reserve!==null&&usage.rate>0?reserve/usage.rate:null,rate:fresh&&!maintenance&&!cycle.potRemoved?(cycle.twelve.rate??cycle.six.rate):null};
+  const state=maintenance?'maintenance':cycle.potRemoved?'removed':!fresh?'stale':percent!==null&&percent<=20?'low':cycle.recent?'refill':'drying';
+  return {state,dry,wet,known,cycle,latest,fresh,maintenance,emptyFloor,potRows,low:recent.length?Math.min(...recent):null,high:recent.length?Math.max(...recent):null,reserve,percent,angle:percent===null?null:225+percent*2.7,usage,days:reserve!==null&&usage.rate>0?reserve/usage.rate:null,rate:fresh&&!maintenance&&!cycle.potRemoved?(cycle.twelve.rate??cycle.six.rate):null};
 }

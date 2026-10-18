@@ -7,7 +7,7 @@ const history=[row(80,530),row(60,11.5),row(40,656.2),row(20,633.4),row(0,629)];
 const full=plantState(plant,history,{now});
 assert.equal(full.percent,100);assert.equal(full.angle,495);assert.equal(full.low,530);assert.equal(full.high,656.2);
 assert.equal(full.rate,null);assert.equal(full.days,null);assert.equal(full.wet,629);
-const dry=plantState(plant,[row(0,525)],{now});assert.equal(dry.percent,0);assert.equal(dry.angle,225);
+const dry=plantState(plant,[row(0,525)],{now});assert.equal(dry.state,'low');assert.equal(dry.percent,0);assert.equal(dry.angle,225);
 const half=plantState(plant,[row(0,577)],{now});assert.equal(half.percent,50);assert.equal(half.angle,360);
 const removed=plantState(plant,[...history,row(-1,0)],{now});assert.equal(removed.percent,null);assert.equal(removed.angle,null);
 const stale=plantState(plant,[row(100,629)],{now});assert.equal(stale.percent,null);assert.equal(stale.days,null);
