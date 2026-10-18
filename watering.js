@@ -1,4 +1,4 @@
-import {waterPlan,assumedHighLossRate,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=2';
+import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=3';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
@@ -13,8 +13,8 @@ function updatePlan(){
   $('#suggested').textContent=suggestion===null?'Learning':fmt(suggestion)+' ml';
   $('#use-suggestion').disabled=running||!(suggestion>0);
   $('#target-weight').textContent=plan.target===null?'—':fmt(plan.target)+' g';
-  $('#projected-days').textContent=plan.days===null?'Set rate':'~'+fmt(plan.days)+' days';
-  $('#projection-note').textContent=plan.days===null?'Add a rate and wet/dry references under Estimate settings.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
+  $('#projected-days').textContent=plan.days===null?'Learning':'~'+fmt(plan.days)+' days';
+  $('#projection-note').textContent=plan.days===null?'Reserve time appears once enough reliable daily readings and wet/dry references are available.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
   $('#wet-warning').hidden=plan.overWet<=0;
   $('#wet-warning').textContent=`Above the wet reference by ${fmt(plan.overWet)} g. Extra may drain; estimated days stay capped.`;
   const valid=addition!==null&&addition>0&&addition<=50000;
@@ -147,7 +147,7 @@ setInterval(()=>{
   }
 },500);
 window.addEventListener('pagehide',()=>{clearTimeout(pollTimer);controller?.abort();});
-function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null,savedConnection=null}){
+function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null,savedConnection=null,usage=null}){
   current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress:'+code:null;
   if(addressKey){try{const saved=localStorage.getItem(addressKey)||localStorage.getItem(key+':liveAddress');if(saved)$('#device-url').value=localReadingUrl(saved).href;}catch{}}
   if(savedConnection){try{$('#device-url').value=localReadingUrl(savedConnection).href;remoteSavedUrl=$('#device-url').value;}catch{}}
@@ -159,7 +159,10 @@ function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=fa
   amount.value=saved>0?saved:plan.suggested>0?plan.suggested.toFixed(1):'';
   rate.value=Number.isFinite(dailyLoss)&&dailyLoss>0?dailyLoss.toFixed(1):'';
   $('#reference-note').textContent=dry!==null&&wet!==null?`${experimental?'Experimental':'Saved'} references · dry ${fmt(dry)} g / wet ${fmt(wet)} g.`:'This pot needs wet and dry references before reserve time can be estimated.';
-  $('#rate-note').textContent=Number.isFinite(dailyLoss)?'Uses the highest assumed loss rate for this model. Adjust if needed.':'No high-use assumption for this plant yet. Enter one to estimate days.';
+  rate.readOnly=true;
+  const usageText=demo?'Example use · 18.6 g/day':usage?.rate?`${usage.qualifyingDays<7?'Early estimate · ':'Measured high use · '}${fmt(usage.rate)} g/day · ${usage.usedDays} of ${usage.qualifyingDays} days`:'Learning daily use';
+  $('#reserve-use').textContent=usageText;
+  $('#rate-note').textContent=demo?'Illustrative data for this example.':usage?.rate?`Average of the higher-use half of ${usage.qualifyingDays} reliable, completed days in this measurement run (last 30 days). Watering, abrupt shifts and gaps are excluded. ${usage.qualifyingDays<7?'Early estimate; more cycles will improve it. ':''}Weight loss includes evaporation.`:`${usage?.qualifyingDays||0} reliable days so far. At least 3 are needed. No fixed species assumption is used.`;
   $('#stored-reading').textContent=demo?'Planning reference: simulated 615.0 g.':`Stored planning weight: ${fmt(current)} g${stamp?' · '+new Date(stamp).toLocaleString():''}.`;
   updatePlan();
 }
@@ -186,9 +189,26 @@ async function init(){
   const savedConnection=plant.live_connection?.device_id===device.id?plant.live_connection.url:null;
   const valid=v=>numberOrNull(v)!==null;
   const learned=valid(plant.learned_dry_g)&&valid(plant.learned_saturated_g)&&Number(plant.learned_saturated_g)>Number(plant.learned_dry_g);
-  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learned?plant.learned_dry_g:plant.provisional_dry_g,high:learned?plant.learned_saturated_g:plant.provisional_saturated_g,dailyLoss:assumedHighLossRate(plant),stamp:reading?.measured_at||reading?.created_at,experimental:!learned,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
+  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learned?plant.learned_dry_g:plant.provisional_dry_g,high:learned?plant.learned_saturated_g:plant.provisional_saturated_g,dailyLoss:null,usage:null,stamp:reading?.measured_at||reading?.created_at,experimental:!learned,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
   if($('#device-url').value){
     try{beginConnection($('#device-url').value.trim());}catch(error){$('#connection-help').textContent=error.message;}
   }else{message('Setup needed');$('#pour-message').textContent='Connect your tile once to enable live watering.';}
+  try{
+    const rows=[],cutoff=new Date(Date.now()-30*86400000).toISOString();
+    for(let offset=0;offset<5000;offset+=1000){
+      let query=supabase.from('readings').select('id,weight_g,measured_at,created_at,run_id').eq('device_id',device.id);
+      query=reading?.run_id==null?query.is('run_id',null):query.eq('run_id',reading.run_id);
+      const {data,error}=await query.gte('created_at',cutoff).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+999);
+      if(error)throw error;
+      rows.push(...(data||[]));
+      if(!data||data.length<1000)break;
+    }
+    const usage=observedHighUse(rows,{dry});
+    rate.value=usage.rate?usage.rate.toFixed(1):'';
+    $('#reserve-use').textContent=usage.rate?`${usage.qualifyingDays<7?'Early estimate · ':'Measured high use · '}${fmt(usage.rate)} g/day · ${usage.usedDays} of ${usage.qualifyingDays} days`:'Learning daily use';
+    $('#rate-note').textContent=usage.rate?`Average of the higher-use half of ${usage.qualifyingDays} reliable, completed days in this measurement run (last 30 days). Watering, abrupt shifts and gaps are excluded. ${usage.qualifyingDays<7?'Early estimate; more cycles will improve it. ':''}Weight loss includes evaporation.`:`${usage.qualifyingDays} reliable days so far. At least 3 are needed. No fixed species assumption is used.`;
+    updatePlan();
+  }catch(error){$('#rate-note').textContent='Daily-use history could not be loaded. Reopen this page to retry.';}
+
 }
 init().catch(error=>{$('#page-error').textContent=error.message;$('#page-error').hidden=false;$('#plant-name').textContent='Choose a plant to plan watering.';});

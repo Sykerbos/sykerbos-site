@@ -17,7 +17,7 @@
 <label class="water-field" for="target-amount">Water to add</label>
 <div class="amount-input"><input id="target-amount" type="number" min="0.1" max="50000" step="0.1" inputmode="decimal" placeholder="120"><span>ml</span></div>
 <div class="suggestion"><span>Suggested <strong id="suggested">—</strong></span><button id="use-suggestion" type="button" class="plain-button" disabled>Use suggestion</button></div>
-<div class="reserve"><small>Estimated reserve</small><strong id="projected-days">Learning</strong><p>Estimate · allow a buffer for time away.</p></div>
+<div class="reserve"><small>Estimated reserve</small><strong id="projected-days">Learning</strong><p id="reserve-use">Learning daily use</p><p>Estimate · allow a buffer for time away.</p></div>
 <p id="wet-warning" class="watering-notice" role="status" hidden></p>
 </section>
 <section class="water-panel live-panel" aria-labelledby="live-title">
@@ -31,10 +31,10 @@
 </section>
 </div>
 <div class="watering-settings">
-<details class="assumptions"><summary>Watering details</summary><p>Target pot weight: <strong id="target-weight">—</strong></p><p id="projection-note" class="field-help"></p><p id="reference-note">Waiting for plant references.</p><label class="water-field" for="daily-rate">High-use assumption <span>g/day</span></label><input id="daily-rate" type="number" min="0.1" max="10000" step="0.1" inputmode="decimal" placeholder="Learning"><p id="rate-note" class="field-help"></p><p class="stored-reading" id="stored-reading">Loading planning weight…</p></details>
+<details class="assumptions"><summary>Watering details</summary><p>Target pot weight: <strong id="target-weight">—</strong></p><p id="projection-note" class="field-help"></p><p id="reference-note">Waiting for plant references.</p><label class="water-field" for="daily-rate">Measured high use <span>g/day</span></label><input id="daily-rate" type="number" min="0.1" max="10000" step="0.1" inputmode="decimal" placeholder="Learning" readonly><p id="rate-note" class="field-help"></p><p class="stored-reading" id="stored-reading">Loading planning weight…</p></details>
 <details id="direct-connection" class="direct-connection"><summary>Connection settings</summary><p>Your tile connects automatically using its last verified address. Use the same Wi-Fi as your tile.</p><form id="connect-form"><label for="device-url" class="water-field">Tile address <span>Advanced</span></label><input id="device-url" type="url" placeholder="http://your-vytile.local/live" autocomplete="off"><button class="button button-small" type="submit">Save and connect</button></form><p id="connection-help" class="field-help">The browser may ask for local-network access.</p><button id="disconnect" class="plain-button" type="button" hidden>Disconnect</button></details>
 </div>
 <div id="demo-controls" class="demo-controls" hidden><p>Try the example</p><button type="button" data-add="10">+10 g</button><button type="button" data-add="25">+25 g</button><button type="button" data-add="50">+50 g</button></div>
 </main>
-<script type="module" src="watering.js?v=5"></script>
+<script type="module" src="watering.js?v=6"></script>
 </body></html>

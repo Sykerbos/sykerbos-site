@@ -6,11 +6,38 @@ export function waterPlan({current,addition,dry,wet,rate}){
   const retainedTarget=target!==null&&valid?Math.min(target,hi):null;
   return {target,suggested:mass!==null&&valid?Math.max(0,hi-mass):null,overWet:target!==null&&valid?Math.max(0,target-hi):0,reserve:retainedTarget!==null?Math.max(0,retainedTarget-lo):null,days:retainedTarget!==null&&loss!==null&&loss>0?Math.max(0,retainedTarget-lo)/loss:null};
 }
-// Highest stage of the existing experimental orange profile (14 → 8 → 6 → 3).
-// Unknown plants need an explicit assumption rather than a late-cycle measured rate.
-export function assumedHighLossRate(plant){
-  const name=[plant?.common_name,plant?.botanical_name,plant?.nickname].filter(Boolean).join(' ').toLowerCase();
-  return name.includes('orange')||name.includes('citrus')?14:null;
+// Completed UTC days in the current measurement run only. This is a planning
+// estimate of measured weight loss (including evaporation), not plant uptake.
+export function observedHighUse(readings,{now=Date.now(),dry=null}={}){
+  const dayMs=86400000,groups=new Map();
+  for(const r of readings||[]){
+    const t=Date.parse(r.measured_at||r.created_at),w=numberOrNull(r.weight_g);
+    if(!Number.isFinite(t)||w===null||w<=0||t>now||t<now-30*dayMs)continue;
+    const day=Math.floor(t/dayMs);
+    if((day+1)*dayMs>now)continue;
+    if(!groups.has(day))groups.set(day,[]);
+    groups.get(day).push({t,w});
+  }
+  const eligible=[];
+  for(const [day,points] of groups){
+    points.sort((a,b)=>a.t-b.t);
+    const pts=points.filter((p,i)=>!i||p.t!==points[i-1].t);
+    if(pts.length<24)continue;
+    const first=pts[0],last=pts.at(-1),span=(last.t-first.t)/dayMs;
+    if(span<22/24||first.t-day*dayMs>3600000||(day+1)*dayMs-last.t>3600000)continue;
+    if(dry!==null&&pts.some(p=>p.w<=dry))continue;
+    const deltas=pts.slice(1).map((p,i)=>pts[i].w-p.w);
+    const sorted=deltas.map(Math.abs).sort((a,b)=>a-b);
+    const median=sorted[Math.floor(sorted.length/2)];
+    // Reject interrupted, watered or abruptly shifted days. Small scale noise
+    // is allowed, but a large step is not interpreted as daily water use.
+    if(pts.slice(1).some((p,i)=>p.t-pts[i].t>5400000)||deltas.some(d=>d < -2||d>Math.max(5,median*8)))continue;
+    const loss=(first.w-last.w)/span;
+    if(loss>0)eligible.push({day:new Date(day*dayMs).toISOString().slice(0,10),loss});
+  }
+  if(eligible.length<3)return {rate:null,qualifyingDays:eligible.length,usedDays:0,days:eligible};
+  const high=[...eligible].sort((a,b)=>b.loss-a.loss).slice(0,Math.ceil(eligible.length/2));
+  return {rate:high.reduce((sum,d)=>sum+d.loss,0)/high.length,qualifyingDays:eligible.length,usedDays:high.length,days:eligible};
 }
 export function localReadingUrl(value){
   const url=new URL(value);
