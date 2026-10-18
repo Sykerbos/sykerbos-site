@@ -175,7 +175,7 @@ $('#reconnect').addEventListener('click',()=>{
   }catch(error){$('#connection-help').textContent=error.message;}
 });
 $('#disconnect').addEventListener('click',()=>disconnect());
-$('#open-zero').addEventListener('click',()=>{$('#direct-connection').open=true;$('#empty-tile-confirm').focus();});
+$('#open-zero').addEventListener('click',()=>{$('#direct-connection').hidden=false;$('#direct-connection').open=true;$('#connect-form').hidden=demo;$('#empty-tile-confirm').focus();});
 $('#empty-tile-confirm').addEventListener('change',()=>{zeroResult='';updateZeroControls();});
 $('#zero-tile').addEventListener('click',async()=>{
   if(zeroing||running||savingFullWeight||!tareSupported||!fresh()||lastWeight===null||Math.abs(lastWeight)>50||!$('#empty-tile-confirm').checked)return;
