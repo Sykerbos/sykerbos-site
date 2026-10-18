@@ -1,6 +1,7 @@
 import {waterPlan,assumedHighLossRate,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=2';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
+let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
 const amount=$('#target-amount'),rate=$('#daily-rate');
 const fmt=(v,d=1)=>v===null||!Number.isFinite(v)?'—':v.toFixed(d);
 function message(text,bad=false){$('#connection-state').textContent=text;$('#connection-state').className='connection-state'+(bad?' stale':connected?' connected':'');}
@@ -20,6 +21,9 @@ function updatePlan(){
   amount.setAttribute('aria-invalid',String(!valid&&amount.value!==''));
   $('#start-watering').disabled=running||!fresh()||!valid;
   $('#end-watering').disabled=!running;
+  $('#start-watering').hidden=running;$('#end-watering').hidden=!running;
+  $('#reconnect').hidden=demo||fresh();$('#reconnect').disabled=running;
+  $('#reconnect').textContent=endpoint?'Reconnect':'Connect tile';
   document.querySelectorAll('[data-add]').forEach(b=>b.disabled=!running);
   if(running&&lastWeight!==null){
     const gained=Math.max(0,lastWeight-baseline),remaining=Math.max(0,addition-gained);
@@ -35,17 +39,21 @@ function receive(weight,sampleAge=0){
   if(!running)current=weight;
   // Round only the display; retain the full reading for targets and progress.
   $('#live-weight').textContent=fmt(Math.round(weight),0);
-  message(demo?'Simulated device · example':'Direct from '+deviceCode);
-  $('#sample-age').textContent=demo?'Example reading':'Fresh reading · updates up to twice a second';
-  if(!running)$('#pour-message').textContent='Ready. Start before pouring.';
-  if(!demo){$('#connection-help').textContent='Connected to '+deviceCode+'.';if(addressKey&&endpoint){try{localStorage.setItem(addressKey,endpoint);}catch{}}}
+  message(demo?'Example':'Live · '+deviceCode);
+  $('#sample-age').hidden=true;
+  if(!running)$('#pour-message').textContent='Keep the pot still. Start before pouring.';
+  if(!demo){
+    $('#connection-help').textContent='Connected to '+deviceCode+'.';
+    if(addressKey&&endpoint){try{localStorage.setItem(addressKey,endpoint);}catch{}}
+    void rememberVerifiedConnection();
+  }
   updatePlan();
 }
 function disconnect(text='Not connected to VyTile'){
   connectionGeneration++;
   clearTimeout(pollTimer);pollTimer=null;controller?.abort();controller=null;endpoint=null;connected=false;
-  $('#disconnect').hidden=true;$('#live-weight').textContent='—';$('#sample-age').textContent='No live feed';
-  if(running)$('#pour-message').textContent='Connection stopped. Stop pouring until fresh readings return.';
+  $('#disconnect').hidden=true;$('#live-weight').textContent='—';$('#sample-age').textContent='No live feed';$('#sample-age').hidden=true;
+  $('#pour-message').textContent=running?'Connection stopped. Stop pouring.':'Connect your tile to start.';
   message(text,true);updatePlan();
 }
 async function poll(){
@@ -66,19 +74,49 @@ async function poll(){
     if(endpoint!==active||generation!==connectionGeneration)return;
     if(error.message?.includes('different VyTile')){disconnect(error.message);return;}
     $('#connection-help').textContent=error instanceof TypeError||error.name==='AbortError'?'Cannot reach the live feed. Check Wi-Fi and local-network permission. The tile must allow this site to read its endpoint.':error instanceof SyntaxError?'The tile returned invalid JSON. Check its live-reading endpoint.':error.message;
-    if(!fresh())message('Waiting for fresh device readings',true);
+    if(!fresh())message('Reconnecting…',true);
   }finally{
     clearTimeout(timeout);if(controller===requestController)controller=null;
     if(endpoint===active&&generation===connectionGeneration)pollTimer=setTimeout(poll,Math.max(100,500-(performance.now()-requestStarted)));
   }
 }
+async function rememberVerifiedConnection(){
+  if(demo||!connectionStore||!endpoint||!fresh()||savingConnection||endpoint===remoteSavedUrl||Date.now()<saveRetryAt)return;
+  const url=endpoint,context=connectionStore;
+  savingConnection=true;
+  try{
+    const {data,error}=await context.client.from('plants').update({live_connection:{url,device_id:context.deviceId,verified_at:new Date(lastSampleAt).toISOString()}}).eq('id',context.plantId).eq('user_id',context.userId).eq('device_id',context.deviceId).select('id').maybeSingle();
+    if(error||!data)throw error||Error('Connection preference could not be saved.');
+    if(connectionStore===context)remoteSavedUrl=url;
+    saveRetryAt=0;
+  }catch{
+    saveRetryAt=Date.now()+60000;
+    if(endpoint===url)$('#connection-help').textContent='Connected. Address remembered on this browser; account save will retry.';
+  }finally{savingConnection=false;}
+}
+function beginConnection(value){
+  const url=localReadingUrl(value);
+  if(!deviceCode)throw Error('Choose a plant linked to a VyTile first.');
+  if(running)throw Error('End the session before changing the connection.');
+  disconnect();lastSequence=-1;lastSampleAt=0;endpoint=url.href;
+  $('#device-url').value=url.href;
+  message('Connecting…');$('#pour-message').textContent='Connecting to your tile…';
+  updatePlan();void poll();
+}
 $('#connect-form').addEventListener('submit',event=>{
   event.preventDefault();
+  try{beginConnection($('#device-url').value.trim());}
+  catch(error){$('#connection-help').textContent=error.message;}
+});
+$('#reconnect').addEventListener('click',()=>{
   try{
-    const url=localReadingUrl($('#device-url').value.trim());
-    if(!deviceCode)throw Error('Choose a plant linked to a VyTile first.');
-    if(running)throw Error('End the current session before changing the device connection.');
-    disconnect();lastSequence=-1;lastSampleAt=0;endpoint=url.href;message('Connecting directly to '+deviceCode+'…');poll();
+    const value=$('#device-url').value.trim();
+    if(!value){
+      $('#direct-connection').open=true;
+      $('#connection-help').textContent='Connect this tile once during setup. Its address will then be remembered.';
+      return;
+    }
+    beginConnection(value);
   }catch(error){$('#connection-help').textContent=error.message;}
 });
 $('#disconnect').addEventListener('click',()=>disconnect());
@@ -93,6 +131,8 @@ $('#end-watering').addEventListener('click',()=>{
   $('#pour-message').textContent='Session ended. Let it drain.';
   $('#use-suggestion').disabled=!(waterPlan({current:lastWeight,dry,wet,addition:0}).suggested>0);
   if(lastWeight!==null)current=lastWeight;
+  $('#added-weight').textContent='—';$('#remaining-weight').textContent='—';$('#water-progress').value=0;
+  document.querySelector('.live-panel').classList.toggle('target-reached',false);
   updatePlan();
 });
 for(const input of [amount,rate])input.addEventListener('input',updatePlan);
@@ -101,15 +141,16 @@ document.querySelectorAll('[data-add]').forEach(button=>button.addEventListener(
 setInterval(()=>{
   if(demo||!connected)return;
   if(!fresh()){
-    message('Live reading paused',true);$('#sample-age').textContent='The displayed weight is stale. Wait for fresh readings before pouring.';
-    $('#start-watering').disabled=true;
-    $('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for fresh readings. Reconnecting automatically.';
+    message('Reconnecting…',true);$('#sample-age').hidden=false;$('#sample-age').textContent='Last reading · reconnecting…';
+    $('#start-watering').disabled=true;$('#reconnect').hidden=false;$('#reconnect').disabled=running;
+    $('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for your tile. Stay on the same Wi-Fi.';
   }
 },500);
 window.addEventListener('pagehide',()=>{clearTimeout(pollTimer);controller?.abort();});
-function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null}){
-  current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress':null;
-  if(addressKey){try{const saved=localStorage.getItem(addressKey);if(saved)$('#device-url').value=localReadingUrl(saved).href;}catch{}}
+function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null,savedConnection=null}){
+  current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress:'+code:null;
+  if(addressKey){try{const saved=localStorage.getItem(addressKey)||localStorage.getItem(key+':liveAddress');if(saved)$('#device-url').value=localReadingUrl(saved).href;}catch{}}
+  if(savedConnection){try{$('#device-url').value=localReadingUrl(savedConnection).href;remoteSavedUrl=$('#device-url').value;}catch{}}
   $('#plant-name').textContent=nickname+' · '+code;
   const plan=waterPlan({current,dry,wet,addition:0});
   $('#suggested').textContent=plan.suggested===null?'Learning':fmt(plan.suggested)+' ml';
@@ -141,8 +182,13 @@ async function init(){
   const {data:latest,error:readingError}=await supabase.from('readings').select('weight_g,measured_at,created_at,run_id').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1);
   if(readingError)throw Error('The planning reference could not be loaded.');
   const reading=latest?.[0];
+  connectionStore={client:supabase,plantId:id,userId:session.user.id,deviceId:device.id};
+  const savedConnection=plant.live_connection?.device_id===device.id?plant.live_connection.url:null;
   const valid=v=>numberOrNull(v)!==null;
   const learned=valid(plant.learned_dry_g)&&valid(plant.learned_saturated_g)&&Number(plant.learned_saturated_g)>Number(plant.learned_dry_g);
-  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learned?plant.learned_dry_g:plant.provisional_dry_g,high:learned?plant.learned_saturated_g:plant.provisional_saturated_g,dailyLoss:assumedHighLossRate(plant),stamp:reading?.measured_at||reading?.created_at,experimental:!learned,key:'sykerbosWaterTarget:'+session.user.id+':'+id});
+  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learned?plant.learned_dry_g:plant.provisional_dry_g,high:learned?plant.learned_saturated_g:plant.provisional_saturated_g,dailyLoss:assumedHighLossRate(plant),stamp:reading?.measured_at||reading?.created_at,experimental:!learned,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
+  if($('#device-url').value){
+    try{beginConnection($('#device-url').value.trim());}catch(error){$('#connection-help').textContent=error.message;}
+  }else{message('Setup needed');$('#pour-message').textContent='Connect your tile once to enable live watering.';}
 }
 init().catch(error=>{$('#page-error').textContent=error.message;$('#page-error').hidden=false;$('#plant-name').textContent='Choose a plant to plan watering.';});

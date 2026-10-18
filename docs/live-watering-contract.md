@@ -22,7 +22,7 @@ Return JSON:
 - Use Cache-Control: no-store. Never generate fresh sequence numbers for cached measurements.
 - Allow GET from the exact website origin https://sykerbos.com through CORS. Do not allow wildcard origins, arbitrary commands, credentials, or network forwarding.
 - Honour the browser's local-network permission. Do not disable browser protections or expose the device with router port forwarding.
-- The site polls at roughly one second plus response time and marks its display stale after three seconds without an accepted sample. No automatic irrigation or device commands are sent.
+- The site polls at a nominal 500 ms request cadence, with no overlapping requests and marks its display stale after three seconds without an accepted sample. No automatic irrigation or device commands are sent.
 
 Authentication/pairing and any existing endpoint configuration must be reviewed against the actual firmware before deployment. No new firmware or network access configuration is installed by this site change.
 
@@ -33,3 +33,17 @@ A scenario's retained target is capped at the wet reference; excess is flagged a
 Days are reserve above the saved dry reference divided by an explicitly displayed daily-loss assumption.
 The orange/citrus model starts at its highest assumed stage, 14 g/day (existing experimental stages: 14, 8, 6, 3). It never uses a recent low-use tail as a post-watering forecast. Plants without a high-use model require a manual rate; the basil demo uses an illustrative 18.6 g/day. The rate remains editable and days are estimates, not a validated holiday forecast.
 The page does not write plant thresholds, telemetry, or watering events to the database.
+
+## Remembered connection
+
+The account-owned plants.live_connection JSON stores url, device_id and verified_at.
+Existing plants RLS applies; no new public or cross-account access is granted.
+The watering page restores a preference only when its device_id matches the plant's
+currently assigned device. It validates a private IP/.local URL and still verifies
+the device identity, advancing sequence and sample freshness on every reading.
+A successful changed address is saved with plant, account and device filters.
+The browser keeps a fallback and the page attempts the saved connection on opening.
+Network permission remains a browser/user decision. No LAN scanning is performed.
+Manual connection settings and estimate assumptions are collapsed below the main
+watering view. Remembering an address does not discover a changed DHCP address;
+a future setup/device-announcement flow can update the same preference.

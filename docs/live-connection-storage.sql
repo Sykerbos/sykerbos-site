@@ -1,0 +1,3 @@
+alter table public.plants add column live_connection jsonb;
+alter table public.plants add constraint plants_live_connection_shape check (live_connection is null or (jsonb_typeof(live_connection) = 'object' and live_connection ?& array['url','device_id','verified_at'] and jsonb_typeof(live_connection->'url') = 'string' and length(live_connection->>'url') between 1 and 512 and jsonb_typeof(live_connection->'device_id') = 'string' and jsonb_typeof(live_connection->'verified_at') = 'string'));
+comment on column public.plants.live_connection is 'Last identity-verified private-network live endpoint for this plant device; account-owned via existing plants RLS. Revalidate URL and device identity before use.';
