@@ -30,7 +30,8 @@ function updatePlan(){
 function receive(weight){
   lastWeight=weight;lastSampleAt=Date.now();connected=true;
   if(!running)current=weight;
-  $('#live-weight').textContent=fmt(weight);
+  // Round only the display; retain the full reading for targets and progress.
+  $('#live-weight').textContent=fmt(Math.round(weight),0);
   message(demo?'Simulated device · example':'Direct from '+deviceCode);
   $('#sample-age').textContent=demo?'Example reading':'Updates about once a second';
   if(!running)$('#pour-message').textContent='Ready. Start before pouring.';
