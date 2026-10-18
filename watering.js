@@ -1,6 +1,6 @@
 import {waterPlan,assumedHighLossRate,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=2';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
-let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null;
+let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 const amount=$('#target-amount'),rate=$('#daily-rate');
 const fmt=(v,d=1)=>v===null||!Number.isFinite(v)?'—':v.toFixed(d);
 function message(text,bad=false){$('#connection-state').textContent=text;$('#connection-state').className='connection-state'+(bad?' stale':connected?' connected':'');}
@@ -8,6 +8,9 @@ function fresh(){return connected&&(demo||Date.now()-lastSampleAt<3000);}
 function updatePlan(){
   const addition=numberOrNull(amount.value),loss=numberOrNull(rate.value),start=running?baseline:current;
   const plan=waterPlan({current:start,addition,dry,wet,rate:loss});
+  const suggestion=waterPlan({current:start,dry,wet,addition:0}).suggested;
+  $('#suggested').textContent=suggestion===null?'Learning':fmt(suggestion)+' ml';
+  $('#use-suggestion').disabled=running||!(suggestion>0);
   $('#target-weight').textContent=plan.target===null?'—':fmt(plan.target)+' g';
   $('#projected-days').textContent=plan.days===null?'Set rate':'~'+fmt(plan.days)+' days';
   $('#projection-note').textContent=plan.days===null?'Add a rate and wet/dry references under Estimate settings.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
@@ -27,17 +30,19 @@ function updatePlan(){
   }
   if(storageKey&&!running&&valid){try{localStorage.setItem(storageKey,amount.value);}catch{}}
 }
-function receive(weight){
-  lastWeight=weight;lastSampleAt=Date.now();connected=true;
+function receive(weight,sampleAge=0){
+  lastWeight=weight;lastSampleAt=Date.now()-sampleAge;connected=true;
   if(!running)current=weight;
   // Round only the display; retain the full reading for targets and progress.
   $('#live-weight').textContent=fmt(Math.round(weight),0);
   message(demo?'Simulated device · example':'Direct from '+deviceCode);
-  $('#sample-age').textContent=demo?'Example reading':'Updates about once a second';
+  $('#sample-age').textContent=demo?'Example reading':'Fresh reading · updates up to twice a second';
   if(!running)$('#pour-message').textContent='Ready. Start before pouring.';
+  if(!demo){$('#connection-help').textContent='Connected to '+deviceCode+'.';if(addressKey&&endpoint){try{localStorage.setItem(addressKey,endpoint);}catch{}}}
   updatePlan();
 }
 function disconnect(text='Not connected to VyTile'){
+  connectionGeneration++;
   clearTimeout(pollTimer);pollTimer=null;controller?.abort();controller=null;endpoint=null;connected=false;
   $('#disconnect').hidden=true;$('#live-weight').textContent='—';$('#sample-age').textContent='No live feed';
   if(running)$('#pour-message').textContent='Connection stopped. Stop pouring until fresh readings return.';
@@ -45,23 +50,26 @@ function disconnect(text='Not connected to VyTile'){
 }
 async function poll(){
   if(!endpoint)return;
-  const active=endpoint;
+  const active=endpoint,generation=connectionGeneration,requestStarted=performance.now();
   const requestController=new AbortController();controller=requestController;const timeout=setTimeout(()=>requestController.abort(),2500);
   try{
     const response=await fetch(active,{signal:requestController.signal,cache:'no-store',credentials:'omit',redirect:'error',targetAddressSpace:'local'});
-    if(!response.ok)throw Error('Device returned HTTP '+response.status+'. Check the live-reading address.');
+    if(!response.ok)throw Error(response.status===503?'The tile is waiting for a fresh sensor sample. Reconnecting automatically.':'Device returned HTTP '+response.status+'. Check the live-reading address.');
     if(!response.headers.get('content-type')?.includes('application/json'))throw Error('This address does not return live JSON. Use the firmware’s live-reading endpoint, not its home page.');
-    const sample=directSample(await response.json(),deviceCode,lastSequence);
-    if(endpoint!==active)return;
-    lastSequence=sample.sequence;receive(sample.weight);$('#disconnect').hidden=false;
+    const payload=await response.json();
+    const sample=directSample(payload,deviceCode,lastSequence);
+    if(endpoint!==active||generation!==connectionGeneration)return;
+    const sampleAge=Number(payload.sample_age_ms)+Math.max(0,performance.now()-requestStarted);
+    if(sampleAge>=3000)throw Error('The response arrived too late to use as live weight. Retrying automatically.');
+    lastSequence=sample.sequence;receive(sample.weight,sampleAge);$('#disconnect').hidden=false;
   }catch(error){
-    if(endpoint!==active)return;
+    if(endpoint!==active||generation!==connectionGeneration)return;
     if(error.message?.includes('different VyTile')){disconnect(error.message);return;}
     $('#connection-help').textContent=error instanceof TypeError||error.name==='AbortError'?'Cannot reach the live feed. Check Wi-Fi and local-network permission. The tile must allow this site to read its endpoint.':error instanceof SyntaxError?'The tile returned invalid JSON. Check its live-reading endpoint.':error.message;
     if(!fresh())message('Waiting for fresh device readings',true);
   }finally{
     clearTimeout(timeout);if(controller===requestController)controller=null;
-    if(endpoint===active)pollTimer=setTimeout(poll,1000);
+    if(endpoint===active&&generation===connectionGeneration)pollTimer=setTimeout(poll,Math.max(100,500-(performance.now()-requestStarted)));
   }
 }
 $('#connect-form').addEventListener('submit',event=>{
@@ -95,12 +103,13 @@ setInterval(()=>{
   if(!fresh()){
     message('Live reading paused',true);$('#sample-age').textContent='The displayed weight is stale. Wait for fresh readings before pouring.';
     $('#start-watering').disabled=true;
-    if(running)$('#pour-message').textContent='Stop pouring: fresh readings are not arriving.';
+    $('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for fresh readings. Reconnecting automatically.';
   }
 },500);
 window.addEventListener('pagehide',()=>{clearTimeout(pollTimer);controller?.abort();});
 function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null}){
-  current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;
+  current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress':null;
+  if(addressKey){try{const saved=localStorage.getItem(addressKey);if(saved)$('#device-url').value=localReadingUrl(saved).href;}catch{}}
   $('#plant-name').textContent=nickname+' · '+code;
   const plan=waterPlan({current,dry,wet,addition:0});
   $('#suggested').textContent=plan.suggested===null?'Learning':fmt(plan.suggested)+' ml';
