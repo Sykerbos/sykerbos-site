@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123d32">
 <title>Water VyTile — Sykerbos</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="watering.css?v=6">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="watering.css?v=7">
 <link rel="icon" href="favicon.ico" sizes="any">
 </head>
 <body class="watering-body">
@@ -28,14 +28,14 @@
 <div class="session-metrics"><div><small>Added</small><strong id="added-weight">—</strong></div><div id="remaining-metric"><small>Remaining</small><strong id="remaining-weight">—</strong></div></div>
 <progress id="water-progress" max="100" value="0" aria-label="Progress toward watering target"></progress>
 <p id="pour-message" class="pour-message" role="status">Finding your tile…</p>
-<div class="session-buttons"><button id="start-watering" class="button" type="button" disabled>Start watering</button><button id="end-watering" class="button button-secondary" type="button" disabled hidden>End session</button><button id="reconnect" class="plain-button" type="button" hidden>Connect tile</button></div>
+<div class="session-buttons"><button id="start-watering" class="button" type="button" disabled>Start watering</button><button id="end-watering" class="button button-secondary" type="button" disabled hidden>End session</button><button id="reconnect" class="plain-button" type="button" hidden>Connect tile</button><button id="open-zero" class="plain-button" type="button" hidden>Zero empty tile</button></div>
 </section>
 </div>
 <div class="watering-settings">
 <details class="assumptions"><summary>Watering details</summary><p>Target pot weight: <strong id="target-weight">—</strong></p><p id="projection-note" class="field-help"></p><p id="reference-note">Waiting for plant references.</p><label class="water-field" for="daily-rate">Measured high use <span>g/day</span></label><input id="daily-rate" type="number" min="0.1" max="10000" step="0.1" inputmode="decimal" placeholder="Learning" readonly><p id="rate-note" class="field-help"></p><p class="stored-reading" id="stored-reading">Loading planning weight…</p></details>
-<details id="direct-connection" class="direct-connection"><summary>Connection settings</summary><p>Your tile connects automatically using its last verified address. Use the same Wi-Fi as your tile.</p><form id="connect-form"><label for="device-url" class="water-field">Tile address <span>Advanced</span></label><input id="device-url" type="url" placeholder="http://your-vytile.local/live" autocomplete="off"><button class="button button-small" type="submit">Save and connect</button></form><p id="connection-help" class="field-help">The browser may ask for local-network access.</p><button id="disconnect" class="plain-button" type="button" hidden>Disconnect</button></details>
+<details id="direct-connection" class="direct-connection"><summary>Connection settings</summary><p>Your tile connects automatically using its last verified address. Use the same Wi-Fi as your tile.</p><form id="connect-form"><label for="device-url" class="water-field">Tile address <span>Advanced</span></label><input id="device-url" type="url" placeholder="http://your-vytile.local/live" autocomplete="off"><button class="button button-small" type="submit">Save and connect</button></form><p id="connection-help" class="field-help">The browser may ask for local-network access.</p><button id="disconnect" class="plain-button" type="button" hidden>Disconnect</button><div class="tile-zero"><h3>Zero empty tile</h3><label><input id="empty-tile-confirm" type="checkbox"> I’ve removed the pot and saucer</label><button id="zero-tile" class="button button-small" type="button" disabled>Zero empty tile</button><p id="zero-help" class="field-help" role="status">Connect your tile to check zeroing.</p></div></details>
 </div>
 <div id="demo-controls" class="demo-controls" hidden><p>Try the example</p><button type="button" data-add="10">+10 g</button><button type="button" data-add="25">+25 g</button><button type="button" data-add="50">+50 g</button></div>
 </main>
-<script type="module" src="watering.js?v=8"></script>
+<script type="module" src="watering.js?v=9"></script>
 </body></html>

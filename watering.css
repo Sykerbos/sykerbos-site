@@ -13,3 +13,5 @@
 @media(max-width:420px){.watering-shell{width:calc(100% - 24px)}.water-panel{padding:22px 18px}.watering-header img{width:85px;height:60px}.watering-header>a:last-child{font-size:.83rem}}
 
 #first-watering h2{font-size:1.8rem;margin:0 0 14px}#first-watering p{line-height:1.6;color:var(--muted);font-size:.9rem}#save-full-controls{margin-top:28px}#save-full-controls label{display:flex;align-items:flex-start;gap:10px;font-size:.85rem;line-height:1.5;margin-bottom:18px}#drained-confirm{width:18px;height:18px;flex:0 0 18px;margin:2px 0 0;accent-color:var(--forest)}#save-full-help{font-size:.78rem!important}
+
+.tile-zero{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}.tile-zero h3{font-size:1rem;margin:0 0 14px}.tile-zero label{display:flex;align-items:flex-start;gap:10px;font-size:.85rem;line-height:1.5;margin-bottom:16px}#empty-tile-confirm{width:18px;height:18px;flex:0 0 18px;margin:2px 0 0;accent-color:var(--forest)}

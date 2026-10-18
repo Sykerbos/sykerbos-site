@@ -3,6 +3,7 @@ const $=s=>document.querySelector(s),params=new URLSearchParams(location.search)
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
 let stableSamples=[],savingFullWeight=false;
+let zeroing=false,tareSupported=false,tareRequestId=null,tareDeadline=0,zeroResult='';
 const amount=$('#target-amount'),rate=$('#daily-rate');
 const fmt=(v,d=1)=>v===null||!Number.isFinite(v)?'—':v.toFixed(d);
 function message(text,bad=false){$('#connection-state').textContent=text;$('#connection-state').className='connection-state'+(bad?' stale':connected?' connected':'');}
@@ -18,20 +19,29 @@ function stableFullWeight(){
 function updateFirstWatering(){
   const gained=baseline!==null&&lastWeight!==null?Math.max(0,lastWeight-baseline):null;
   $('#added-weight').textContent=running&&gained!==null?fmt(gained)+' g':'—';
-  $('#start-watering').disabled=running||!fresh();
+  $('#start-watering').disabled=running||zeroing||!fresh();
   $('#end-watering').disabled=!running;
   $('#start-watering').hidden=running;$('#end-watering').hidden=!running;
   $('#reconnect').hidden=demo||fresh();$('#reconnect').disabled=running;
   $('#save-full-controls').hidden=running;
   const weight=stableFullWeight(),confirmed=$('#drained-confirm').checked;
-  $('#save-full-weight').disabled=running||savingFullWeight||!confirmed||weight===null;
+  $('#save-full-weight').disabled=running||zeroing||savingFullWeight||!confirmed||weight===null;
   $('#save-full-weight').textContent=savingFullWeight?'Saving…':weight===null?'Save full weight':`Save ${weight} g as full weight`;
   if(!savingFullWeight)$('#save-full-help').textContent=weight===null?'Waiting for a steady live weight above the dry reference.':confirmed?'Ready to save this pot’s capacity.':'Confirm the pot is watered and drained before saving.';
   $('#wet-warning').hidden=true;
   document.querySelectorAll('[data-add]').forEach(b=>b.disabled=!running);
   if(fresh())$('#pour-message').textContent=running?'First watering: stop if runoff appears. Let the pot drain.':'First watering: start to track the weight, or save an already drained pot.';
 }
+function updateZeroControls(){
+  const empty=fresh()&&lastWeight!==null&&Math.abs(lastWeight)<=50;
+  $('#open-zero').hidden=!empty||running;$('#open-zero').disabled=zeroing||savingFullWeight;
+  $('#zero-tile').disabled=zeroing||running||savingFullWeight||!tareSupported||!empty||!$('#empty-tile-confirm').checked;
+  $('#empty-tile-confirm').disabled=zeroing||running||savingFullWeight;
+  $('#zero-tile').textContent=zeroing?'Zeroing…':'Zero empty tile';
+  $('#zero-help').textContent=zeroing?'Keep the empty tile still. Saving its zero…':zeroResult||(!fresh()?'Connect your tile to zero it.':!tareSupported?'A tile firmware update is needed to enable zeroing.':!empty?'Remove the pot and saucer first.':'Confirm the tile is empty, then zero it.');
+}
 function updatePlan(){
+  updateZeroControls();
   const first=wet===null;
   $('#first-watering').hidden=!first;
   $('#watering-target-controls').hidden=first;
@@ -53,7 +63,7 @@ function updatePlan(){
   else amount.removeAttribute('max');
   const valid=addition!==null&&addition>0&&addition<=50000&&plan.permitted;
   amount.setAttribute('aria-invalid',String(!valid&&amount.value!==''));
-  $('#start-watering').disabled=running||!fresh()||!valid;
+  $('#start-watering').disabled=running||zeroing||!fresh()||!valid;
   $('#end-watering').disabled=!running;
   $('#start-watering').hidden=running;$('#end-watering').hidden=!running;
   $('#reconnect').hidden=demo||fresh();$('#reconnect').disabled=running;
@@ -108,6 +118,12 @@ async function poll(){
     if(endpoint!==active||generation!==connectionGeneration)return;
     const sampleAge=Number(payload.sample_age_ms)+Math.max(0,performance.now()-requestStarted);
     if(sampleAge>=3000)throw Error('The response arrived too late to use as live weight. Retrying automatically.');
+    tareSupported=payload.can_tare===true;
+    if(zeroing&&tareRequestId!==null&&payload.tare_id===tareRequestId&&payload.tare_status!=='pending'){
+      zeroing=false;stableSamples=[];$('#empty-tile-confirm').checked=false;$('#drained-confirm').checked=false;
+      zeroResult=payload.tare_status==='done'?'Zero saved on the tile. Replace your pot.':'Zero was not saved ('+String(payload.tare_status||'unknown')+'). Keep the empty tile still and retry.';
+      tareRequestId=null;
+    }
     lastSequence=sample.sequence;receive(sample.weight,sampleAge);$('#disconnect').hidden=false;
   }catch(error){
     if(endpoint!==active||generation!==connectionGeneration)return;
@@ -159,9 +175,25 @@ $('#reconnect').addEventListener('click',()=>{
   }catch(error){$('#connection-help').textContent=error.message;}
 });
 $('#disconnect').addEventListener('click',()=>disconnect());
+$('#open-zero').addEventListener('click',()=>{$('#direct-connection').open=true;$('#empty-tile-confirm').focus();});
+$('#empty-tile-confirm').addEventListener('change',()=>{zeroResult='';updateZeroControls();});
+$('#zero-tile').addEventListener('click',async()=>{
+  if(zeroing||running||savingFullWeight||!tareSupported||!fresh()||lastWeight===null||Math.abs(lastWeight)>50||!$('#empty-tile-confirm').checked)return;
+  zeroing=true;zeroResult='';tareRequestId=null;tareDeadline=Date.now()+15000;stableSamples=[];updatePlan();
+  if(demo){zeroing=false;$('#empty-tile-confirm').checked=false;zeroResult='Example zero saved. Replace your pot.';receive(0);return;}
+  const request=new AbortController(),timeout=setTimeout(()=>request.abort(),6000);
+  try{
+    const response=await fetch(new URL('/tare',endpoint).href,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device_code:deviceCode,confirm_empty:true}),cache:'no-store',credentials:'omit',redirect:'error',targetAddressSpace:'local',signal:request.signal});
+    const payload=await response.json();
+    if(response.status!==202||payload.device_code!==deviceCode||!Number.isSafeInteger(payload.tare_id)||payload.tare_id<1||payload.tare_status!=='pending')throw Error('Zero request was not accepted.');
+    tareRequestId=payload.tare_id;
+  }catch(error){zeroing=false;zeroResult='Could not confirm zeroing. Check the empty live reading before retrying.';updatePlan();}
+  finally{clearTimeout(timeout);}
+});
+
 $('#start-watering').addEventListener('click',()=>{
   const plan=waterPlan({current:lastWeight,addition:amount.value,dry,wet});
-  if(!fresh()||(wet!==null&&(!plan.permitted||Number(amount.value)>50000))){updatePlan();return;}
+  if(zeroing||!fresh()||(wet!==null&&(!plan.permitted||Number(amount.value)>50000))){updatePlan();return;}
   baseline=lastWeight;current=lastWeight;running=true;amount.disabled=true;rate.disabled=true;$('#use-suggestion').disabled=true;
   $('#added-weight').textContent='0.0 g';$('#remaining-weight').textContent=fmt(Number(amount.value))+' g';updatePlan();
 });
@@ -179,7 +211,7 @@ $('#end-watering').addEventListener('click',()=>{
 $('#drained-confirm').addEventListener('change',updatePlan);
 $('#save-full-weight').addEventListener('click',async()=>{
   const weight=stableFullWeight();
-  if(wet!==null||running||savingFullWeight||!$('#drained-confirm').checked||weight===null)return;
+  if(wet!==null||running||zeroing||savingFullWeight||!$('#drained-confirm').checked||weight===null)return;
   savingFullWeight=true;updatePlan();
   try{
     if(!demo){
@@ -198,11 +230,12 @@ for(const input of [amount,rate])input.addEventListener('input',updatePlan);
 $('#use-suggestion').addEventListener('click',()=>{const p=waterPlan({current,dry,wet,addition:0});if(p.suggested>0){amount.value=String(Math.floor((p.suggested+1e-7)*10)/10);updatePlan();}});
 document.querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',()=>{if(demo&&running)receive(lastWeight+Number(button.dataset.add));}));
 setInterval(()=>{
+  if(zeroing&&Date.now()>tareDeadline){zeroing=false;tareRequestId=null;zeroResult='Could not confirm zeroing. Check the empty live reading before retrying.';updatePlan();}
   if(demo){if(wet===null&&connected)receive(lastWeight);return;}
   if(!connected)return;
   if(!fresh()){
     message('Reconnecting…',true);$('#sample-age').hidden=false;$('#sample-age').textContent='Last reading · reconnecting…';
-    $('#save-full-weight').disabled=true;stableSamples=[];
+    $('#save-full-weight').disabled=true;$('#zero-tile').disabled=true;stableSamples=[];
     $('#start-watering').disabled=true;$('#reconnect').hidden=false;$('#reconnect').disabled=running;
     $('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for your tile. Stay on the same Wi-Fi.';
   }
@@ -232,7 +265,7 @@ async function init(){
   if(demo){
     $('#demo-notice').hidden=false;$('#demo-controls').hidden=false;$('#direct-connection').hidden=true;$('#back-plant').href='demo.html';
     setContext({nickname:'Kitchen Basil · watering example',code:'DemoTile',mass:615,low:610,high:params.get('first')==='1'?null:735,dailyLoss:18.6,experimental:true});
-    receive(615);return;
+    tareSupported=true;receive(params.get('zero')==='1'?-5:615);return;
   }
   const {supabase}=await import('./supabase-client.js');
   const {data:{session}}=await supabase.auth.getSession();
