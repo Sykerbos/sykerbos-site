@@ -1,7 +1,7 @@
 import { supabase } from './supabase-client.js';
 import { plantAssetFor } from './plant-assets.js';
 import { reserveState, reserveMarkup } from './water-reserve.js?v=1';
-import { irrigationState } from './irrigation-state.js?v=1';
+import { irrigationState } from './irrigation-state.js?v=2';
 
 const $=selector=>document.querySelector(selector);
 const fmt=(value,digits=1)=>{
@@ -84,6 +84,7 @@ function plantReserve(p){
   const valid=v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v));
   const learned=valid(p.learned_dry_g)&&valid(p.learned_saturated_g);
   const state=reserveState({weight:p.latest?.weight_g,dry:p.learned_dry_g??p.provisional_dry_g,wet:p.learned_saturated_g??p.provisional_saturated_g,fresh,maintenance:p.status==='offline'||p.device?.status==='maintenance',provisional:!learned});
+  if(p.cycle?.potRemoved&&state.kind!=='offline')return {...state,kind:'learning',percent:null,label:'Pot removed',action:'Return the pot to resume its readings.',note:'Water reserve paused'};
   if(p.cycle?.recent&&state.percent!==null&&state.kind!=='offline')return {...state,label:'Recently watered',action:p.cycle.settling?'Watered recently. Let the pot settle.':'Following the new dry-down.',note:'Refill inferred from weight history'};
   return state;
 }
@@ -247,13 +248,13 @@ async function renderDashboard(enriched,historyRows=null){
     $(valueId).textContent=result.rate===null?'Learning':result.rate.toFixed(1)+' g/day';
     $(noteId).textContent=result.rate!==null?`Measured over ${hours} h${cycle.refill?' after watering':''}`:result.reason==='refill'?'Rebuilding after watering':result.reason==='handling'?'Waiting after a weight change':result.reason==='settling'?'Weight is still settling':'Waiting for a continuous window';
   }
-  const freshEvent=cycle.recent&&eventReserve.kind!=='offline';
+  const freshEvent=cycle.recent&&!cycle.potRemoved&&eventReserve.kind!=='offline';
   if(freshEvent){
     $('#primary-summary').textContent=`A refill was detected around ${new Date(cycle.refill.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}. Dry-down rates restart after watering.`;
     $('#intelligence-title').textContent=cycle.settling?'Watching the refill.':'Learning the new dry-down.';
     $('#intelligence-copy').textContent=`Pot weight increased by about ${cycle.refill.gain.toFixed(0)} g. Earlier dry-down readings are excluded from the new 6- and 12-hour rates. Drainage and handling can also change weight.`;
   }else{
-    $('#primary-summary').textContent=cycle.six.rate!==null?`${plantLabel(primary)} is using about ${cycle.six.rate.toFixed(1)} g/day over its latest uninterrupted 6-hour window.`:'Watching for a continuous dry-down between watering and handling events.';
+    $('#primary-summary').textContent=cycle.potRemoved?'The pot appears to be off the tile. Water reserve and dry-down readings are paused.':cycle.six.rate!==null?`${plantLabel(primary)} is using about ${cycle.six.rate.toFixed(1)} g/day over its latest uninterrupted 6-hour window.`:'Watching for a continuous dry-down between watering and handling events.';
     $('#intelligence-title').textContent=`Learning ${plantLabel(primary)}.`;
     $('#intelligence-copy').textContent='Refills and large handling changes restart the dry-down calculation. Rates use uninterrupted readings from this measurement run.';
   }

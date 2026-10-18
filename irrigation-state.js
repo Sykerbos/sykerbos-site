@@ -34,5 +34,5 @@ export function irrigationState(readings,{dry=null,wet=null,now=Date.now()}={}){
     const slope=denominator?window.reduce((s,p)=>s+(p.t/1000-mx)*(p.w-my),0)/denominator*86400:null;
     return slope===null?{rate:null,reason:'coverage'}:slope>0?{rate:null,reason:'settling'}:{rate:-slope,reason:null};
   }
-  return {refill,recent,settling:recent&&age<2*3600000,latest,segment,six:rateFor(6),twelve:rateFor(12)};
+  return {refill,recent,potRemoved:Boolean(latest&&latest.w<empty),settling:recent&&age<2*3600000,latest,segment,six:rateFor(6),twelve:rateFor(12)};
 }

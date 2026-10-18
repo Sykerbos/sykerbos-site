@@ -24,4 +24,5 @@ state=irrigationState([...before,row(740,640,'new-run')],options);
 assert.equal(state.refill,null);
 state=irrigationState(Array.from({length:40},(_,i)=>row(i*20,600+i*.01)),{...options,now:start+780*60000});
 assert.equal(state.six.rate,null);assert.equal(state.six.reason,'settling');
+assert.equal(irrigationState([...full,row(780,0)],{...options,now:start+780*60000}).potRemoved,true);
 console.log('Passed: refill reset, post-refill rates, pot removal/return, small zero shifts, gaps, separate runs and rising-weight suppression.');
