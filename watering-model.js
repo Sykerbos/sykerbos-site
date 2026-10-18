@@ -2,9 +2,12 @@ export const numberOrNull=v=>v==null||String(v).trim()===''?null:Number.isFinite
 export function waterPlan({current,addition,dry,wet,rate}){
   const mass=numberOrNull(current),add=numberOrNull(addition),lo=numberOrNull(dry),hi=numberOrNull(wet),loss=numberOrNull(rate);
   const target=mass!==null&&add!==null&&add>=0?mass+add:null;
+  const capacity=mass!==null&&hi!==null&&hi>0?Math.max(0,hi-mass):null;
+  const overWet=target!==null&&hi!==null?Math.max(0,target-hi):0;
   const valid=lo!==null&&hi!==null&&hi>lo;
-  const retainedTarget=target!==null&&valid?Math.min(target,hi):null;
-  return {target,suggested:mass!==null&&valid?Math.max(0,hi-mass):null,overWet:target!==null&&valid?Math.max(0,target-hi):0,reserve:retainedTarget!==null?Math.max(0,retainedTarget-lo):null,days:retainedTarget!==null&&loss!==null&&loss>0?Math.max(0,retainedTarget-lo)/loss:null};
+  const permitted=capacity!==null&&add!==null&&add>0&&add<=capacity+1e-7;
+  const reserve=target!==null&&valid&&overWet<=1e-7?Math.max(0,target-lo):null;
+  return {target,suggested:capacity,overWet,permitted,reserve,days:reserve!==null&&loss!==null&&loss>0?reserve/loss:null};
 }
 // Completed UTC days in the current measurement run only. This is a planning
 // estimate of measured weight loss (including evaporation), not plant uptake.

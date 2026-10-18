@@ -1,4 +1,4 @@
-import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=3';
+import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=4';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
@@ -10,14 +10,17 @@ function updatePlan(){
   const addition=numberOrNull(amount.value),loss=numberOrNull(rate.value),start=running?baseline:current;
   const plan=waterPlan({current:start,addition,dry,wet,rate:loss});
   const suggestion=waterPlan({current:start,dry,wet,addition:0}).suggested;
-  $('#suggested').textContent=suggestion===null?'Learning':fmt(suggestion)+' ml';
+  $('#suggested').textContent=suggestion===null?'Not set':fmt(suggestion)+' ml';
   $('#use-suggestion').disabled=running||!(suggestion>0);
   $('#target-weight').textContent=plan.target===null?'—':fmt(plan.target)+' g';
-  $('#projected-days').textContent=plan.days===null?'Learning':'~'+fmt(plan.days)+' days';
+  $('#projected-days').textContent=plan.overWet>1e-7?'—':plan.days===null?'Learning':'~'+fmt(plan.days)+' days';
   $('#projection-note').textContent=plan.days===null?'Reserve time appears once enough reliable daily readings and wet/dry references are available.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
-  $('#wet-warning').hidden=plan.overWet<=0;
-  $('#wet-warning').textContent=`Above the wet reference by ${fmt(plan.overWet)} g. Extra may drain; estimated days stay capped.`;
-  const valid=addition!==null&&addition>0&&addition<=50000;
+  const full=wet!==null&&start!==null&&start>=wet;
+  $('#wet-warning').hidden=wet!==null&&!full&&plan.overWet<=1e-7;
+  $('#wet-warning').textContent=wet===null?'Confirm this pot’s fully drained saturated weight before setting a watering target.':full?`At saturated weight (${fmt(wet,0)} g). No more water needed.`:`Maximum ${fmt(plan.suggested)} ml to the ${fmt(wet,0)} g saturated weight. Reduce the amount or use the suggestion.`;
+  if(plan.suggested!==null)amount.max=String(Math.floor((plan.suggested+1e-7)*10)/10);
+  else amount.removeAttribute('max');
+  const valid=addition!==null&&addition>0&&addition<=50000&&plan.permitted;
   amount.setAttribute('aria-invalid',String(!valid&&amount.value!==''));
   $('#start-watering').disabled=running||!fresh()||!valid;
   $('#end-watering').disabled=!running;
@@ -29,8 +32,10 @@ function updatePlan(){
     const gained=Math.max(0,lastWeight-baseline),remaining=Math.max(0,addition-gained);
     $('#added-weight').textContent=fmt(gained)+' g';$('#remaining-weight').textContent=fmt(remaining)+' g';
     $('#water-progress').value=Math.min(100,gained/addition*100);
-    document.querySelector('.live-panel').classList.toggle('target-reached',gained>=addition);
-    if(fresh())$('#pour-message').textContent=gained>=addition?'Target reached. Stop and let it drain.':remaining<=10?'Nearly there. Slow down.':'Pour slowly.';
+    const atCapacity=wet!==null&&lastWeight>=wet,reached=gained>=addition||atCapacity;
+    document.querySelector('.live-panel').classList.toggle('target-reached',reached);
+    if(atCapacity)$('#remaining-weight').textContent='0.0 g';
+    if(fresh())$('#pour-message').textContent=atCapacity?'Saturated weight reached. Stop pouring.':reached?'Target reached. Stop pouring.':remaining<=10?'Nearly there. Slow down.':'Pour slowly.';
   }
   if(storageKey&&!running&&valid){try{localStorage.setItem(storageKey,amount.value);}catch{}}
 }
@@ -121,7 +126,8 @@ $('#reconnect').addEventListener('click',()=>{
 });
 $('#disconnect').addEventListener('click',()=>disconnect());
 $('#start-watering').addEventListener('click',()=>{
-  if(!fresh()||!(Number(amount.value)>0))return;
+  const plan=waterPlan({current:lastWeight,addition:amount.value,dry,wet});
+  if(!fresh()||!plan.permitted||Number(amount.value)>50000){updatePlan();return;}
   baseline=lastWeight;current=lastWeight;running=true;amount.disabled=true;rate.disabled=true;$('#use-suggestion').disabled=true;
   $('#added-weight').textContent='0.0 g';$('#remaining-weight').textContent=fmt(Number(amount.value))+' g';updatePlan();
 });
@@ -136,7 +142,7 @@ $('#end-watering').addEventListener('click',()=>{
   updatePlan();
 });
 for(const input of [amount,rate])input.addEventListener('input',updatePlan);
-$('#use-suggestion').addEventListener('click',()=>{const p=waterPlan({current,dry,wet,addition:0});if(p.suggested>0){amount.value=p.suggested.toFixed(1);updatePlan();}});
+$('#use-suggestion').addEventListener('click',()=>{const p=waterPlan({current,dry,wet,addition:0});if(p.suggested>0){amount.value=String(Math.floor((p.suggested+1e-7)*10)/10);updatePlan();}});
 document.querySelectorAll('[data-add]').forEach(button=>button.addEventListener('click',()=>{if(demo&&running)receive(lastWeight+Number(button.dataset.add));}));
 setInterval(()=>{
   if(demo||!connected)return;
@@ -153,12 +159,12 @@ function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=fa
   if(savedConnection){try{$('#device-url').value=localReadingUrl(savedConnection).href;remoteSavedUrl=$('#device-url').value;}catch{}}
   $('#plant-name').textContent=nickname+' · '+code;
   const plan=waterPlan({current,dry,wet,addition:0});
-  $('#suggested').textContent=plan.suggested===null?'Learning':fmt(plan.suggested)+' ml';
+  $('#suggested').textContent=plan.suggested===null?'Not set':fmt(plan.suggested)+' ml';
   $('#use-suggestion').disabled=!(plan.suggested>0);
   let saved=null;try{saved=key?numberOrNull(localStorage.getItem(key)):null;}catch{}
-  amount.value=saved>0?saved:plan.suggested>0?plan.suggested.toFixed(1):'';
+  amount.value=plan.suggested>0?String(Math.floor((Math.min(saved>0?saved:plan.suggested,plan.suggested)+1e-7)*10)/10):'';
   rate.value=Number.isFinite(dailyLoss)&&dailyLoss>0?dailyLoss.toFixed(1):'';
-  $('#reference-note').textContent=dry!==null&&wet!==null?`${experimental?'Experimental':'Saved'} references · dry ${fmt(dry)} g / wet ${fmt(wet)} g.`:'This pot needs wet and dry references before reserve time can be estimated.';
+  $('#reference-note').textContent=dry!==null&&wet!==null?`Saturated weight ${fmt(wet,0)} g · ${experimental?'experimental':'saved'} dry reference ${fmt(dry,0)} g.`:'This pot needs wet and dry references before reserve time can be estimated.';
   rate.readOnly=true;
   const usageText=demo?'Example use · 18.6 g/day':usage?.rate?`${usage.qualifyingDays<7?'Early estimate · ':'Measured high use · '}${fmt(usage.rate)} g/day · ${usage.usedDays} of ${usage.qualifyingDays} days`:'Learning daily use';
   $('#reserve-use').textContent=usageText;
@@ -188,8 +194,8 @@ async function init(){
   connectionStore={client:supabase,plantId:id,userId:session.user.id,deviceId:device.id};
   const savedConnection=plant.live_connection?.device_id===device.id?plant.live_connection.url:null;
   const valid=v=>numberOrNull(v)!==null;
-  const learned=valid(plant.learned_dry_g)&&valid(plant.learned_saturated_g)&&Number(plant.learned_saturated_g)>Number(plant.learned_dry_g);
-  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learned?plant.learned_dry_g:plant.provisional_dry_g,high:learned?plant.learned_saturated_g:plant.provisional_saturated_g,dailyLoss:null,usage:null,stamp:reading?.measured_at||reading?.created_at,experimental:!learned,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
+  const learnedDry=valid(plant.learned_dry_g),confirmedWet=valid(plant.learned_saturated_g)&&Number(plant.learned_saturated_g)>0;
+  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learnedDry?plant.learned_dry_g:plant.provisional_dry_g,high:confirmedWet?plant.learned_saturated_g:null,dailyLoss:null,usage:null,stamp:reading?.measured_at||reading?.created_at,experimental:!learnedDry,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
   if($('#device-url').value){
     try{beginConnection($('#device-url').value.trim());}catch(error){$('#connection-help').textContent=error.message;}
   }else{message('Setup needed');$('#pour-message').textContent='Connect your tile once to enable live watering.';}
