@@ -1,0 +1,12 @@
+# Plant page measurement consistency
+
+- Reserve uses independently selected saved/provisional dry and saturated references, consistently with watering and dashboard calculations. It is a weight-derived estimate, not measured soil moisture.
+- The radial uses a 270-degree arc beginning at 225 degrees: 0% is the orange lower-left endpoint, 50% is green at the top, and 100% is the blue lower-right endpoint. Both the indicator and color arc use this same geometry. The indicator scales with the ring on mobile. Unknown, removed-pot, stale and maintenance states hide the position marker.
+- Recent pot low/high and chart bounds exclude readings below max(50 g, half the dry reference). Empty-tile readings remain in the database and recent reading list; the plotted line breaks at those samples instead of treating them as dry-down lows. Observed low/high remain observations, not thresholds.
+- Daily use shares the dashboard's irrigation-state module. Watering/handling jumps restart the uninterrupted segment and cannot become positive water-use rates or be converted to positive use with abs(). The chart marks inferred refills.
+- Reserve days share watering's observedHighUse calculation over current-run history from the last 30 days, paginated to 5,000 readings. There must be at least three reliable full days. The estimate uses the higher-use half of those days; unsupported fixed species stages are removed. Reserve is capped at the reference capacity. Early estimates and experimental dry references are explicitly labelled.
+- The reserve map's three-day marker is derived from that measured rate; it is hidden without evidence. This is an estimate, not a validated irrigation trigger.
+- Recorded cycle counts replace invented confidence percentages. Inferred refills do not increment cycle records. Current-run counts are queried for the active run, not taken from a lifetime summary view.
+- The page refreshes metadata every minute and on returning to the tab, so newly saved references take effect even when the latest reading has not changed. History is refreshed only for a new reading/run. Backend data is read-only from this page; existing RLS and plant ownership filters apply.
+
+`plant.html?demo=watering` is explicitly simulated and performs no account access or writes. `&reserve=0`, `&reserve=50` and `&reserve=100` allow geometry checks. Tests: `node tests/plant-state.mjs` and `node tests/irrigation-state.mjs`.

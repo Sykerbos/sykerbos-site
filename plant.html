@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261015-3">
+  <link rel="stylesheet" href="plant.css?v=20261018-reserve">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -25,6 +25,7 @@
   </header>
 
   <main class="plant-shell">
+    <p id="plant-demo-notice" class="panel-note" hidden>Demo · Simulated plant readings</p>
     <a class="back-link" href="plants.html">← All plants</a>
 
     <section class="plant-hero">
@@ -77,14 +78,14 @@
           <article class="panel moisture-position">
             <p class="eyebrow">Water reserve</p>
             <div class="radial-wrap">
-              <div class="radial-gauge" id="radial-gauge" style="--level:0;--angle:0deg;--pref-start:40;--pref-size:0">
+              <div class="radial-gauge" id="radial-gauge" data-known="false" style="--angle:225deg">
                 <div><strong id="range-percent">Learning</strong><small>water reserve</small></div>
-                <span class="preferred-band" aria-hidden="true"></span>
+                <span class="gauge-indicator" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="preferred-band-row"><span class="preferred-swatch"></span><span id="preferred-band-label">Preferred range · learning</span></div>
-            <div class="range-scale"><span><small>Recent low</small><strong id="range-low-side">—</strong></span><span><small>Recent high</small><strong id="range-high-side">—</strong></span></div>
-            <p id="range-explanation">The latest 72 readings in the current run show its actual recent low and high weights. A true reserve percentage will appear once Sykerbos has learned stable dry and saturated thresholds for this plant.</p>
+            <div class="gauge-endpoints"><span>Dry · 0%</span><span>Full · 100%</span></div>
+            <div class="range-scale"><span><small>Recent pot low</small><strong id="range-low-side">—</strong></span><span><small>Recent pot high</small><strong id="range-high-side">—</strong></span></div>
+            <p id="range-explanation">Loading this pot’s saved references.</p>
           </article>
 
           <article class="panel next-action">
@@ -120,25 +121,17 @@
         <div class="intelligence-dashboard">
           <article class="panel intelligence-visual-card">
             <div class="panel-heading">
-              <div><p class="eyebrow">Expected behaviour</p><h3>Dry-down signature</h3></div>
-              <span class="evidence-pill">Experimental</span>
+              <div><p class="eyebrow">Observed behaviour</p><h3>Measured water use</h3></div>
+              <span class="evidence-pill" id="use-evidence">Early evidence</span>
             </div>
-            <div class="slope-visual" id="slope-visual" aria-label="Expected dry-down stages">
-              <div class="slope-stage"><strong>14</strong><span>High use</span></div>
-              <div class="slope-arrow">→</div>
-              <div class="slope-stage"><strong>8</strong><span>Declining</span></div>
-              <div class="slope-arrow">→</div>
-              <div class="slope-stage"><strong>6</strong><span>Lower reserve</span></div>
-              <div class="slope-arrow">→</div>
-              <div class="slope-stage"><strong>3</strong><span>Reserve end</span></div>
-            </div>
+            <div class="measured-use-grid"><div><strong id="high-use-rate">Learning</strong><small>High use · g/day</small></div><div><strong id="high-use-days">0</strong><small>Reliable full days</small></div><div><strong id="new-cycle-readings">0</strong><small>New dry-down readings</small></div></div>
             <div class="current-slope-line"><span>Current measured rate</span><strong id="intelligence-current-rate">—</strong></div>
-            <p class="panel-note">g/day · provisional Valencia-orange pattern from early Sykerbos experiments.</p>
+            <p class="panel-note" id="use-method-note">Learning from measured days.</p>
           </article>
 
           <article class="panel confidence-card">
             <div class="panel-heading">
-              <div><p class="eyebrow">Learning confidence</p><h3 id="confidence-title">Early evidence</h3></div>
+              <div><p class="eyebrow">Cycle evidence</p><h3 id="confidence-title">Early evidence</h3></div>
               <strong class="confidence-number" id="confidence-number">—</strong>
             </div>
             <div class="confidence-track"><span id="confidence-track-bar" style="width:0%"></span></div>
@@ -161,7 +154,7 @@
               <div class="reserve-labels">
                 <span class="reserve-label wet-label" id="reserve-wet-label"><strong id="intel-wet">—</strong><small>Saturated</small></span>
                 <span class="reserve-label current-label" id="reserve-current-label"><strong id="intel-current">—</strong><small>Current</small></span>
-                <span class="reserve-label trigger-label" id="reserve-trigger-label"><strong id="intel-trigger">—</strong><small>~3-day trigger</small></span>
+                <span class="reserve-label trigger-label" id="reserve-trigger-label"><strong id="intel-trigger">—</strong><small>3-day estimate</small></span>
                 <span class="reserve-label dry-label" id="reserve-dry-label"><strong id="intel-dry">—</strong><small>Dry threshold</small></span>
               </div>
             </div>
@@ -169,7 +162,7 @@
 
           <article class="panel evidence-card">
             <p class="eyebrow">What Sykerbos knows so far</p>
-            <h3>Evidence, not instructions.</h3>
+            <h3>Recorded observations.</h3>
             <div class="evidence-list">
               <div><span>Observed signal</span><strong id="evidence-slope">Dry-down curve learning</strong></div>
               <div><span>Reserve model</span><strong id="evidence-reserve">Thresholds learning</strong></div>
@@ -202,6 +195,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261017-watering"></script>
+  <script type="module" src="plant.js?v=20261018-reserve"></script>
 </body>
 </html>

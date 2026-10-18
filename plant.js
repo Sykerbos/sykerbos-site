@@ -1,455 +1,163 @@
-import { supabase } from './supabase-client.js';
-import { plantAssetFor } from './plant-assets.js';
-import { observedRange } from './observed-range.js?v=1';
+import {supabase} from './supabase-client.js';
+import {plantAssetFor} from './plant-assets.js';
+import {plantState} from './plant-state.js?v=1';
 
 const $=s=>document.querySelector(s);
-const fmt=(v,d=1)=>Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
-const stampOf=r=>r?.measured_at||r?.created_at||null;
-const timeOf=r=>new Date(stampOf(r)||0).getTime();
-function numericOrNull(value){
-  if(value===null||value===undefined||value==='') return null;
-  const n=Number(value);
-  return Number.isFinite(n)?n:null;
+const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n).toFixed(d):'—';
+const stamp=r=>r?.measured_at||r?.created_at;
+const time=r=>Date.parse(stamp(r));
+const name=p=>p.nickname||p.common_name||'Your plant';
+let plant=null,device=null,rows=[],count=0,rangeHours=24,latestKey='',loading=false;
+const demo=new URLSearchParams(location.search).get('demo')==='watering';
+function age(t){
+  if(!Number.isFinite(t))return 'No reading';
+  const minutes=Math.max(0,Math.round((Date.now()-t)/60000));
+  return minutes<2?'just now':minutes<60?minutes+' min ago':Math.round(minutes/60)+' h ago';
 }
-
+function setAsset(el,asset){if(asset){el.style.backgroundImage=`url("${asset.image}")`;el.classList.add('has-image');}}
 const tabs=[...document.querySelectorAll('.plant-tabs button')];
-const panels=[...document.querySelectorAll('.plant-tab-panel')];
 tabs.forEach(button=>button.addEventListener('click',()=>{
-  const target=button.dataset.tab;
   tabs.forEach(b=>b.classList.toggle('active',b===button));
-  panels.forEach(panel=>panel.classList.toggle('active',panel.dataset.panel===target));
-  history.replaceState(null,'',location.pathname+location.search+'#'+target);
+  document.querySelectorAll('.plant-tab-panel').forEach(p=>p.classList.toggle('active',p.dataset.panel===button.dataset.tab));
+  history.replaceState(null,'',location.pathname+location.search+'#'+button.dataset.tab);
 }));
-const hash=location.hash.replace('#','');
-if(hash){const button=tabs.find(b=>b.dataset.tab===hash);if(button) button.click();}
-
-function plantName(p){return p.nickname||p.common_name||'Unnamed plant';}
-function species(p){return [p.common_name,p.botanical_name].filter(Boolean).join(' · ');}
-function ageLabel(value){
-  if(!value) return 'No recent reading';
-  const m=Math.max(0,Math.round((Date.now()-new Date(value).getTime())/60000));
-  if(m<2)return 'just now'; if(m<60)return m+' min ago';
-  const h=Math.round(m/60); if(h<48)return h+' h ago';
-  return Math.round(h/24)+' d ago';
+const requested=tabs.find(b=>b.dataset.tab===location.hash.slice(1));if(requested)requested.click();
+document.querySelectorAll('.range-pills button').forEach(button=>button.addEventListener('click',()=>{
+  document.querySelectorAll('.range-pills button').forEach(b=>b.classList.toggle('active',b===button));
+  rangeHours={'24h':24,'7d':168,'30d':720}[button.textContent.trim()]||24;render();
+}));
+function chart(view){
+  const latestTime=view.latest?.t||Date.now(),cutoff=latestTime-rangeHours*3600000;
+  const visible=rows.filter(r=>time(r)>=cutoff&&time(r)<=latestTime).sort((a,b)=>time(a)-time(b));
+  const pot=visible.filter(r=>Number(r.weight_g)>=view.emptyFloor);
+  if(pot.length<2){$('#plant-chart').innerHTML='<div class="chart-loading">More pot readings are needed for this range.</div>';return;}
+  const weights=pot.map(r=>Number(r.weight_g)),lo=Math.min(...weights),hi=Math.max(...weights),span=Math.max(1,time(visible.at(-1))-time(visible[0]));
+  const point=r=>[28+(time(r)-time(visible[0]))/span*844,28+(hi-Number(r.weight_g))/Math.max(1,hi-lo)*244];
+  let path='',gap=true;
+  for(const r of visible){if(Number(r.weight_g)<view.emptyFloor){gap=true;continue;}const [x,y]=point(r);path+=(gap?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';gap=false;}
+  let marker='';
+  const event=visible.find(r=>time(r)===view.cycle.refill?.at);
+  if(event){const [x,y]=point(event);marker=`<line x1="${x}" y1="28" x2="${x}" y2="272" stroke="#b63969" stroke-dasharray="5 5"/><circle cx="${x}" cy="${y}" r="5" fill="#b63969"/><text x="${Math.min(810,Math.max(35,x-45))}" y="44" fill="#753a51" font-size="14">Refill</text>`;}
+  $('#plant-chart').innerHTML=`<svg viewBox="0 0 900 300" role="img" aria-label="Pot weight history; empty-tile readings omitted"><path d="${path}" class="plant-live-line"/>${marker}</svg><span class="plant-y top">${fmt(hi,0)} g</span><span class="plant-y bottom">${fmt(lo,0)} g</span>`;
+  $('#plant-chart-note').textContent=`${pot.length} pot readings · ${rangeHours<48?'24 hours':rangeHours/24+' days'} · empty-tile readings omitted`;
 }
-function setAsset(el,asset){
-  if(!el) return;
-  if(asset){el.style.backgroundImage=`url("${asset.image}")`;el.classList.add('has-image');}
-  else{el.style.backgroundImage='none';el.classList.remove('has-image');}
-}
-function readingNear(readings,hoursAgo,anchor,toleranceMinutes=75){
-  if(!readings?.length||!anchor) return null;
-  const target=timeOf(anchor)-hoursAgo*3600000;
-  let best=null,bestDiff=Infinity;
-  for(const r of readings){
-    const diff=Math.abs(timeOf(r)-target);
-    if(diff<bestDiff){best=r;bestDiff=diff;}
-  }
-  return bestDiff<=toleranceMinutes*60000?best:null;
-}
-function delta(oldReading,newReading){
-  const a=Number(oldReading?.weight_g),b=Number(newReading?.weight_g);
-  return Number.isFinite(a)&&Number.isFinite(b)?b-a:null;
-}
-function showDelta(selector,n){
-  const el=$(selector);
-  if(!el) return;
-  el.textContent=n===null?'—':(n>0?'+':'')+n.toFixed(1)+' g';
-}
-function slopePerDay(readings){
-  const pts=(readings||[])
-    .filter(r=>Number.isFinite(Number(r.weight_g))&&stampOf(r))
-    .map(r=>({x:timeOf(r)/1000,y:Number(r.weight_g)}));
-  if(pts.length<3) return null;
-  const mx=pts.reduce((s,p)=>s+p.x,0)/pts.length;
-  const my=pts.reduce((s,p)=>s+p.y,0)/pts.length;
-  const num=pts.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0);
-  const den=pts.reduce((s,p)=>s+(p.x-mx)*(p.x-mx),0);
-  return den?num/den*86400:null;
-}
-function windowReadings(readings,hours,anchor){
-  if(!anchor) return [];
-  const cutoff=timeOf(anchor)-hours*3600000;
-  return (readings||[]).filter(r=>timeOf(r)>=cutoff&&timeOf(r)<=timeOf(anchor));
-}
-function showDryDown(selector,slope){
-  const el=$(selector);
-  if(!el) return;
-  if(slope===null){el.textContent='—';return;}
-  el.textContent=slope<0?Math.abs(slope).toFixed(1)+' g/day':'+'+slope.toFixed(1)+' g/day';
-}
-
-function behaviorProfile(plant){
-  const hay=[plant?.common_name,plant?.botanical_name,plant?.nickname].filter(Boolean).join(' ').toLowerCase();
-  if(hay.includes('orange')||hay.includes('citrus')){
-    return {
-      label:'Experimental orange dry-down profile',
-      expectedStages:[14,8,6,3],
-      reserveTriggerG:18,
-      reserveTriggerDays:3,
-      preferredBand:null
-    };
-  }
-  return null;
-}
-
-function confidenceFromCycles(cycles){
-  const n=Math.max(0,Number(cycles)||0);
-  if(n>=8) return {pct:100,label:'High confidence'};
-  if(n>=5) return {pct:80,label:'Strong pattern'};
-  if(n>=3) return {pct:60,label:'Building confidence'};
-  if(n>=1) return {pct:35,label:'Early repeatability'};
-  return {pct:15,label:'Early evidence'};
-}
-
-function forecastFromRate(rate,profile,reserveG=null){
-  if(!profile) return null;
-  const use=Number.isFinite(rate)?Math.abs(rate):null;
-
-  if(Number.isFinite(reserveG)){
-    if(reserveG<=0) return {days:'At dry threshold',stage:'Reserve depleted',next:'Current mass is at or below the provisional dry threshold.'};
-    if(reserveG<=3) return {days:'<1 day',stage:'Final reserve',next:'Only a few grams remain above the provisional dry threshold; the orange experiments approached the ~3 g/day stall region here.'};
-    if(reserveG<=9) return {days:'~1–2 days',stage:'Lower reserve',next:'Reserve is inside the experimental 6 → 3 g/day end-stage window.'};
-    if(reserveG<=18) return {days:'~3 days',stage:'Three-day reserve window',next:'Reserve has entered the provisional ~18 g trigger window associated with the 8 → 6 → 3 g/day decline.'};
-
-    const baseRate=Math.max(8,use||8);
-    const extraDays=(reserveG-18)/baseRate;
-    return {days:'~'+Math.max(3,Math.round((3+extraDays)*10)/10)+' days',stage:'Reserve available',next:'Projection includes the expected slowdown toward the 8 → 6 → 3 g/day end-stage pattern rather than extending the current rate indefinitely.'};
-  }
-
-  if(!Number.isFinite(use)) return null;
-  if(use>=11) return {days:'3+ days',stage:'High-use phase',next:'Expected to slow toward ~8 g/day before the three-day reserve window.'};
-  if(use>=7) return {days:'~3 days',stage:'Three-day window',next:'Experimental trigger zone: about 18 g usable reserve before the 8 → 6 → 3 g/day decline.'};
-  if(use>=5) return {days:'~2 days',stage:'Lower reserve',next:'Expected dry-down is moving toward ~6 g/day, then ~3 g/day.'};
-  if(use>=2.5) return {days:'~1 day',stage:'Near end of reserve',next:'A ~3 g/day rate has marked the final low-reserve stage in the orange experiments.'};
-  return {days:'<1 day',stage:'Low-use stall',next:'Water use is near the experimental stall region; irrigation should be considered if no recent watering event explains the change.'};
-}
-
-function drawChart(readings){
-  const host=$('#plant-chart');
-  const pts=readings.filter(r=>Number.isFinite(Number(r.weight_g))&&stampOf(r)).sort((a,b)=>timeOf(a)-timeOf(b));
-  if(pts.length<2){host.innerHTML='<div class="chart-loading">Not enough weight readings for this range.</div>';return;}
-  const vals=pts.map(r=>Number(r.weight_g)), min=Math.min(...vals), max=Math.max(...vals), range=Math.max(1,max-min);
-  const w=900,h=300,p=28;
-  const coords=pts.map((r,i)=>[p+(i/(pts.length-1))*(w-2*p),p+((max-Number(r.weight_g))/range)*(h-2*p)]);
-  const path=coords.map(([x,y],i)=>(i?'L':'M')+x.toFixed(1)+','+y.toFixed(1)).join(' ');
-  host.innerHTML=`<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Weight history">
-    <line x1="${p}" y1="${p}" x2="${w-p}" y2="${p}" class="plant-grid-line"/>
-    <line x1="${p}" y1="${h/2}" x2="${w-p}" y2="${h/2}" class="plant-grid-line"/>
-    <line x1="${p}" y1="${h-p}" x2="${w-p}" y2="${h-p}" class="plant-grid-line"/>
-    <path d="${path}" class="plant-live-line"/>
-  </svg><span class="plant-y top">${max.toFixed(0)} g</span><span class="plant-y bottom">${min.toFixed(0)} g</span>`;
-  host.dataset.netChange=(vals.at(-1)-vals[0]).toFixed(1);
-}
-
-function recentEvents(readings){
-  const host=$('#event-list');
-  const pts=[...readings].sort((a,b)=>timeOf(b)-timeOf(a)).slice(0,3);
-  host.innerHTML=pts.map((r,i)=>`<article><span class="event-icon">${i===0?'●':'·'}</span><div><strong>${fmt(r.weight_g)} g · ${fmt(r.temperature_c)} °C</strong><small>${new Date(stampOf(r)).toLocaleString()}</small></div></article>`).join('');
-}
-
-async function loadRange(deviceId,hours,runId=null){
-  const {data:latestRows,error:latestError}=await supabase.from('readings')
-    .select('weight_g,temperature_c,measured_at,created_at,run_id')
-    .eq('device_id',deviceId)
-    .order('measured_at',{ascending:false,nullsFirst:false})
-    .order('created_at',{ascending:false})
-    .limit(1);
-  if(latestError) throw latestError;
-  const anchor=latestRows?.[0];
-  if(!anchor){
-    drawChart([]);
-    return;
-  }
-  const since=new Date(timeOf(anchor)-hours*3600000).toISOString();
-  let rangeQuery=supabase.from('readings')
-    .select('weight_g,temperature_c,measured_at,created_at,run_id')
-    .eq('device_id',deviceId)
-    .gte('measured_at',since)
-    .lte('measured_at',new Date(timeOf(anchor)+60000).toISOString())
-    .order('measured_at',{ascending:true})
-    .limit(5000);
-  if(runId) rangeQuery=rangeQuery.eq('run_id',runId);
-  const {data,error}=await rangeQuery;
-  if(error) throw error;
-  const readings=data||[];
-  drawChart(readings);
-  recentEvents(readings);
-  $('#plant-chart-note').textContent=`${readings.length.toLocaleString()} current-run readings${runId?' · '+runId:''}`;
-
-  const newest=readings.at(-1)||anchor;
-  const six=readingNear(readings,6,newest);
-  const twelve=readingNear(readings,12,newest);
-  const sixWindow=windowReadings(readings,6,newest);
-  const twelveWindow=windowReadings(readings,12,newest);
-  const sixSlope=slopePerDay(sixWindow);
-  const twelveSlope=slopePerDay(twelveWindow);
-  const currentRate=(twelve&&Number.isFinite(twelveSlope))?twelveSlope:
-    (six&&Number.isFinite(sixSlope)?sixSlope:null);
-  const movement=twelve?delta(twelve,newest):(six?delta(six,newest):null);
-
-  showDryDown('#plant-current-rate',currentRate);
-  $('#plant-current-rate-note').textContent=Number.isFinite(currentRate)
-    ? ((Math.abs(currentRate)<=3.5)?'Low-use / possible reserve-end signal':'Smoothed from recent active-run readings')
-    : 'Not enough continuous data';
-
-  $('#plant-recent-movement').textContent=movement===null?'—':(movement>0?'+':'')+movement.toFixed(1)+' g';
-  $('#plant-recent-movement-note').textContent=twelve?'Net movement over 12 h':six?'Net movement over 6 h':'Not enough continuous data';
-
-  const profile=window.__plantBehaviorProfile||null;
-  const forecast=forecastFromRate(currentRate,profile,window.__plantReserveG);
-  $('#plant-projected-days').textContent=forecast?.days||'Learning';
-  $('#plant-projected-note').textContent=forecast
-    ? (Number.isFinite(window.__plantReserveG)?`${window.__plantReserveG.toFixed(1)} g reserve · ${forecast.stage}`:forecast.stage)
-    : 'More dry-down cycles needed';
-
-  if(forecast&&profile){
-    $('#plant-action-title').textContent=forecast.stage+'.';
-    $('#plant-action-copy').textContent=forecast.next;
-  }
-
-  const intelRate=$('#intelligence-current-rate');
-  if(intelRate) intelRate.textContent=Number.isFinite(currentRate)?Math.abs(currentRate).toFixed(1)+' g/day':'—';
-  const evidenceSlope=$('#evidence-slope');
-  if(evidenceSlope){
-    evidenceSlope.textContent=Number.isFinite(currentRate)
-      ? 'Current use '+Math.abs(currentRate).toFixed(1)+' g/day'
-      : 'Dry-down curve learning';
+function eventList(view){
+  const host=$('#event-list');host.replaceChildren();
+  const events=[];
+  if(view.cycle.refill)events.push({title:'Refill detected',copy:new Date(view.cycle.refill.at).toLocaleString()+' · inferred from the weight change'});
+  for(const r of rows.slice(-3).reverse())events.push({title:Number(r.weight_g)<view.emptyFloor?'Empty tile / handling':fmt(r.weight_g)+' g · '+fmt(r.temperature_c)+' °C',copy:new Date(time(r)).toLocaleString()});
+  for(const event of events.slice(0,4)){
+    const article=document.createElement('article'),icon=document.createElement('span'),body=document.createElement('div'),title=document.createElement('strong'),copy=document.createElement('small');
+    icon.className='event-icon';icon.textContent='·';title.textContent=event.title;copy.textContent=event.copy;body.append(title,copy);article.append(icon,body);host.append(article);
   }
 }
+function render(){
+  if(!plant)return;
+  const maintenance=plant.status==='offline'||device?.status==='maintenance';
+  const view=plantState(plant,rows,{maintenance}),cycle=view.cycle;
+  $('#plant-status').textContent=maintenance?'Maintenance':view.fresh?'Connected':'Last seen '+age(view.latest?.t);
+  $('#plant-status').className='status '+(maintenance?'offline':view.fresh?'good':'learning');
+  $('#plant-weight').textContent=view.latest?fmt(view.latest.w)+' g':'—';
+  $('#plant-temperature').textContent=view.latest?fmt(view.latest.temperature_c)+' °C':'—';
+  $('#plant-reading-count').textContent=count.toLocaleString();
+  $('#plant-summary').textContent=maintenance?'This tile is in maintenance. Historical readings remain available.':cycle.potRemoved?'The pot appears removed. Reserve estimates are paused.':!view.fresh?'Waiting for a fresh tile reading.':cycle.recent?'Recently watered. Watching the pot settle and begin its next dry-down.':'Following this pot’s measured weight and dry-down.';
 
+  const gauge=$('#radial-gauge');
+  gauge.dataset.known=String(view.percent!==null);
+  gauge.style.setProperty('--angle',(view.angle??225)+'deg');
+  gauge.setAttribute('role','img');gauge.setAttribute('aria-label',view.percent===null?'Water reserve unavailable':`Estimated water reserve ${Math.round(view.percent)} percent; dry to full`);
+  $('#range-percent').textContent=cycle.potRemoved?'Pot off':view.percent===null?'Learning':Math.round(view.percent)+'%';
+  $('#range-percent').classList.toggle('learning-reserve',view.percent===null);
+  $('#range-low-side').textContent=fmt(view.low)+' g';$('#range-high-side').textContent=fmt(view.high)+' g';
+  $('#range-explanation').textContent=cycle.potRemoved?'Return the pot to resume reserve estimates.':!view.fresh?'Waiting for a fresh reading.':view.known?`Dry ${fmt(view.dry,0)} g (${plant.learned_dry_g!=null?'saved':'experimental'}) · full ${fmt(view.wet,0)} g (${plant.learned_saturated_g!=null?'saved':'experimental'}). Estimated from weight, not a soil-moisture measurement.`:'Confirm this pot’s dry and saturated references to estimate reserve.';
+
+  $('#plant-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';
+  $('#plant-current-rate-note').textContent=view.rate!==null?'Measured since the latest watering / handling change':cycle.recent?'Rebuilding after watering':'Waiting for an uninterrupted dry-down';
+  const segment=cycle.segment;
+  const movement=segment.length>1?segment.at(-1).w-segment[0].w:null;
+  $('#plant-recent-movement').textContent=movement===null?'—':(movement>0?'+':'')+fmt(movement)+' g';
+  $('#plant-recent-movement-note').textContent='Since the latest refill / handling change';
+  $('#plant-projected-days').textContent=view.days===null?'Learning':'~'+fmt(view.days)+' days';
+  $('#plant-projected-note').textContent=view.days===null?'Waiting for reliable daily use and references':`${fmt(view.reserve)} g reserve · ${fmt(view.usage.rate)} g/day${view.usage.qualifyingDays<7?' · early estimate':''}`;
+  $('#plant-action-title').textContent=maintenance?'Tile in maintenance.':cycle.potRemoved?'Return the pot.':!view.fresh?'Waiting for a reading.':cycle.recent?'Recently watered.':view.percent!==null&&view.percent<=20?'Check your plant.':'Follow the dry-down.';
+  $('#plant-action-copy').textContent=maintenance?'Historical readings remain available while the tile is in maintenance.':cycle.potRemoved?'Return the pot to resume water reserve and dry-down readings.':!view.fresh?'Reconnect the tile before relying on its current reserve estimate.':cycle.recent?'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.':view.percent!==null&&view.percent<=20?'Reserve is low against the saved references. Check the plant before watering.':'Use the measured trend alongside your plant’s condition. Reserve days are estimates.';
+
+  $('#plant-intelligence-title').textContent='Learning '+name(plant)+'.';
+  $('#plant-intelligence-copy').textContent=`${count.toLocaleString()} readings in ${view.latest?.run_id||'this measurement run'}. Irrigation and handling changes are excluded from daily-use rates.`;
+  $('#plant-learning-bar').style.width=Math.min(100,Math.round(segment.length/36*100))+'%';
+  $('#plant-learning-note').textContent=segment.length+' readings in the current uninterrupted dry-down';
+  $('#high-use-rate').textContent=view.usage.rate===null?'Learning':fmt(view.usage.rate);
+  $('#high-use-days').textContent=String(view.usage.qualifyingDays);
+  $('#new-cycle-readings').textContent=String(segment.length);
+  $('#use-evidence').textContent=view.usage.qualifyingDays<7?'Early evidence':'Measured';
+  $('#use-method-note').textContent=view.usage.rate===null?'At least 3 reliable full days are needed. No fixed species rate is assumed.':`g/day · average of the higher-use ${view.usage.usedDays} of ${view.usage.qualifyingDays} reliable days in this run. Weight loss includes evaporation.`;
+  $('#intelligence-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';
+  const cycles=Math.max(0,Number(plant.cycles_observed)||0);
+  $('#confidence-title').textContent=cycles?'Recorded cycle evidence':'No recorded cycles yet';$('#confidence-number').textContent=String(cycles);
+  $('#confidence-track-bar').style.width=Math.min(100,cycles/8*100)+'%';
+  $('#confidence-copy').textContent='Recorded cycle count, not a percentage confidence or accuracy score. Detected refills do not automatically count as validated cycles.';
+  $('#evidence-cycles').textContent=cycles+' recorded cycles';
+  $('#evidence-slope').textContent=view.rate===null?'Dry-down rebuilding':fmt(view.rate)+' g/day measured';
+  $('#evidence-reserve').textContent=view.known?`${plant.learned_saturated_g!=null?'Saved':'Experimental'} full weight · ${plant.learned_dry_g!=null?'saved':'experimental'} dry reference`:'References still needed';
+  $('#evidence-next').textContent='Observe the next uninterrupted dry-down';
+  $('#intel-wet').textContent=fmt(view.wet,0)+' g';$('#intel-dry').textContent=fmt(view.dry,0)+' g';$('#intel-current').textContent=fmt(view.latest?.w)+' g';
+  const trigger=view.known&&view.usage.rate>0?Math.min(view.wet,view.dry+view.usage.rate*3):null;
+  $('#intel-trigger').textContent=fmt(trigger,0)+' g';
+  $('#reserve-trigger-marker').hidden=trigger===null;$('#reserve-trigger-label').hidden=trigger===null;
+  $('#reserve-current-marker').hidden=view.percent===null;
+  $('#reserve-wet-marker').hidden=!view.known;$('#reserve-dry-marker').hidden=!view.known;
+  const place=n=>view.known?Math.max(0,Math.min(100,(view.wet-n)/(view.wet-view.dry)*100)):0;
+  $('#reserve-wet-marker').style.left='0%';$('#reserve-dry-marker').style.left='100%';
+  if(view.percent!==null)$('#reserve-current-marker').style.left=place(view.latest.w)+'%';
+  if(trigger!==null)$('#reserve-trigger-marker').style.left=place(trigger)+'%';
+  chart(view);eventList(view);
+}
+async function loadHistory(latest){
+  const result=[],cutoff=new Date(Date.now()-30*86400000).toISOString();
+  for(let offset=0;offset<5000;offset+=1000){
+    let q=supabase.from('readings').select('id,weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).gte('created_at',cutoff).order('created_at',{ascending:false}).order('id',{ascending:false});
+    q=latest.run_id?q.eq('run_id',latest.run_id):q.is('run_id',null);
+    const {data,error}=await q.range(offset,offset+999);if(error)throw error;result.push(...(data||[]));if(!data||data.length<1000)break;
+  }
+  rows=result.sort((a,b)=>time(a)-time(b));
+  let q=supabase.from('readings').select('id',{count:'exact',head:true}).eq('device_id',device.id);q=latest.run_id?q.eq('run_id',latest.run_id):q.is('run_id',null);
+  const {count:total,error}=await q;if(error)throw error;count=total||0;
+}
+async function refresh(){
+  if(loading||document.hidden)return;loading=true;
+  try{
+    const [{data:plantRow,error:plantError},{data:latestRows,error:readingError}]=await Promise.all([
+      supabase.from('plants').select('*').eq('id',plant.id).eq('user_id',plant.user_id).maybeSingle(),
+      supabase.from('readings').select('weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1)
+    ]);
+    if(plantError||readingError||!plantRow)throw plantError||readingError||Error('Plant unavailable');
+    if(plantRow.device_id!==device.id)throw Error('The assigned tile changed. Reopen this plant.');
+    plant=plantRow;const latest=latestRows?.[0],key=latest?JSON.stringify([stamp(latest),latest.weight_g,latest.run_id]):'';
+    if(latest&&key!==latestKey){await loadHistory(latest);latestKey=key;}
+    render();
+  }catch(error){$('#plant-summary').textContent='Could not refresh this plant. Reopen the page to retry.';console.error(error);}
+  finally{loading=false;}
+}
 async function init(){
-  const {data:{session}}=await supabase.auth.getSession();
-  if(!session){location.replace('account.html');return;}
-  const user=session.user;
-  const id=new URLSearchParams(location.search).get('plant');
-
-  let q=supabase.from('plants').select('*').eq('user_id',user.id);
-  if(id) q=q.eq('id',id); else q=q.eq('is_primary',true);
-  const {data:rows,error}=await q.limit(1);
-  if(error||!rows?.length){
-    $('#plant-title').textContent='Plant not found';
-    $('#plant-summary').textContent='Return home and choose a plant from your collection.';
-    return;
+  if(demo){
+    $('#plant-demo-notice').hidden=false;
+    plant={id:'demo',nickname:'Pot B',common_name:'Valencia Orange Seedling',botanical_name:'Citrus × sinensis',learned_saturated_g:629,provisional_dry_g:525,cycles_observed:0};
+    device={device_code:'DemoTile'};
+    const now=Date.now();rows=Array.from({length:289},(_,i)=>({weight_g:i<285?558-i*.1:i===285?11.5:i===286?656.2:i===287?633.4:629,temperature_c:22.7,measured_at:new Date(now-(288-i)*20*60000).toISOString(),run_id:'DEMO-REFILL'}));
+    const percent=new URLSearchParams(location.search).get('reserve');if(percent!==null&&Number.isFinite(Number(percent)))rows.at(-1).weight_g=525+104*Math.max(0,Math.min(100,Number(percent)))/100;
+    count=rows.length;
+  }else{
+    const {data:{session}}=await supabase.auth.getSession();if(!session){location.replace('account.html');return;}
+    const id=new URLSearchParams(location.search).get('plant');let q=supabase.from('plants').select('*').eq('user_id',session.user.id);q=id?q.eq('id',id):q.eq('is_primary',true);
+    const {data,error}=await q.limit(1);if(error||!data?.length)throw error||Error('Plant not found');plant=data[0];
+    const result=await supabase.from('devices').select('*').eq('id',plant.device_id).maybeSingle();if(result.error||!result.data)throw result.error||Error('No tile assigned');device=result.data;
   }
-  const p=rows[0];
-  $('#water-vytile-button').href='watering.html?plant='+encodeURIComponent(p.id);
-  const asset=plantAssetFor(p);
-  const profile=behaviorProfile(p);
-  window.__plantBehaviorProfile=profile;
-  document.title=plantName(p)+' — Sykerbos';
-  $('#plant-title').textContent=plantName(p);
-  $('#plant-species').textContent=species(p)||'Your plant';
-  $('#herbarium-plant-name').textContent=p.common_name||plantName(p);
-  $('#herbarium-botanical-name').innerHTML=p.botanical_name?'<em>'+p.botanical_name+'</em>':'';
-  setAsset($('#plant-hero-image'),asset);
-  setAsset($('#plant-herbarium-image'),asset);
+  const asset=plantAssetFor(plant);setAsset($('#plant-hero-image'),asset);setAsset($('#plant-herbarium-image'),asset);
+  document.title=name(plant)+' — Sykerbos';$('#plant-title').textContent=name(plant);$('#plant-species').textContent=[plant.common_name,plant.botanical_name].filter(Boolean).join(' · ');
+  $('#plant-device-label').textContent=device.device_code;$('#herbarium-plant-name').textContent=plant.common_name||name(plant);$('#herbarium-botanical-name').textContent=plant.botanical_name||'';
   if(asset?.dossier){$('#herbarium-dossier-link').href=asset.dossier;$('#herbarium-dossier-link').textContent='Open full dossier →';}
-
-  const {data:device}=await supabase.from('devices').select('*').eq('id',p.device_id).maybeSingle();
-  if(!device){$('#plant-summary').textContent='No VyTile is assigned to this plant.';return;}
-  $('#plant-device-label').textContent=device.device_code;
-
-  const [{data:latestRows},{data:summaryRows}]=await Promise.all([
-    supabase.from('readings').select('weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1),
-    supabase.from('device_reading_summary').select('*').eq('device_id',device.id).limit(1)
-  ]);
-  const latest=latestRows?.[0]||null, summary=summaryRows?.[0]||null;
-  let recentRangeRows=[];
-  if(latest){
-    let recentRangeQuery=supabase.from('readings')
-      .select('weight_g,measured_at,created_at,run_id')
-      .eq('device_id',device.id)
-      .order('measured_at',{ascending:false,nullsFirst:false})
-      .order('created_at',{ascending:false})
-      .limit(72);
-    if(latest.run_id) recentRangeQuery=recentRangeQuery.eq('run_id',latest.run_id);
-    const {data:recentRows}=await recentRangeQuery;
-    recentRangeRows=recentRows||[];
-  }
-  let runSummary=null;
-  if(latest?.run_id){
-    const {data:runRows}=await supabase.from('device_run_summary')
-      .select('*')
-      .eq('device_id',device.id)
-      .eq('run_id',latest.run_id)
-      .limit(1);
-    runSummary=runRows?.[0]||null;
-  }
-  const fresh=stampOf(latest)&&(Date.now()-new Date(stampOf(latest)).getTime()<90*60000);
-  const maintenance=p.status==='offline'||device.status==='maintenance';
-  $('#plant-status').textContent=maintenance?'Maintenance':fresh?'Connected':'Last seen '+ageLabel(stampOf(latest));
-  $('#plant-status').className='status '+(maintenance?'offline':fresh?'good':'learning');
-  if(maintenance){
-    $('#plant-summary').textContent=`${plantName(p)} is currently offline while ${device.device_code} is awaiting an electronics rebuild. Historical readings remain available below.`;
-  }
-  $('#plant-weight').textContent=latest?fmt(latest.weight_g)+' g':'—';
-  $('#plant-temperature').textContent=latest?fmt(latest.temperature_c)+' °C':'—';
-  $('#plant-reading-count').textContent=Number(runSummary?.reading_count||summary?.reading_count||0).toLocaleString();
-  if(!maintenance){
-    $('#plant-summary').textContent=`${plantName(p)} is linked to ${device.device_code}. This page is now using its recorded weight and temperature history.`;
-  }
-
-  let current=null,reserveG=null,reservePercent=null;
-  function updateWaterRange(rangeRows,reading){
-    const observed=observedRange(rangeRows,reading);
-    const {low,high}=observed;
-    current=observed.current;
-    reserveG=null;reservePercent=null;
-    $('#range-low-side').textContent=low===null?'—':low.toFixed(1)+' g';
-    $('#range-high-side').textContent=high===null?'—':high.toFixed(1)+' g';
-    if(Number.isFinite(low)&&Number.isFinite(high)&&Number.isFinite(current)){
-
-      const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
-      const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
-      const gauge=$('#radial-gauge');
-
-      if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
-        reserveG=Math.max(0,current-dryThreshold);
-        reservePercent=Math.max(0,Math.min(100,(reserveG/(wetThreshold-dryThreshold))*100));
-        gauge.style.setProperty('--level',reservePercent.toFixed(1));
-        gauge.style.setProperty('--angle',(reservePercent*3.6).toFixed(1)+'deg');
-        $('#range-percent').textContent=Math.round(reservePercent)+'%';
-        $('#range-percent').classList.remove('learning-reserve');
-        $('#range-explanation').textContent=`Reserve uses ${p.learned_dry_g!=null?'learned':'experimental'} dry/saturated thresholds (${dryThreshold.toFixed(0)}–${wetThreshold.toFixed(0)} g). The recent low/high below are actual measured extremes from the latest 72 readings in this run, including the current reading. New lows extend the observed dry-down; they do not automatically change the watering threshold.`;
-      }else{
-        const recentPosition=high>low?Math.max(0,Math.min(100,((current-low)/(high-low))*100)):0;
-        gauge.style.setProperty('--level',recentPosition.toFixed(1));
-        gauge.style.setProperty('--angle',(recentPosition*3.6).toFixed(1)+'deg');
-        $('#range-percent').textContent='Learning';
-        $('#range-percent').classList.add('learning-reserve');
-        $('#range-explanation').textContent='Recent low/high show actual measured extremes from the latest 72 readings in this run, including the current reading. Watering references are still being learned.';
-      }
-
-      if(profile?.preferredBand){
-        gauge.style.setProperty('--pref-start',profile.preferredBand[0]);
-        gauge.style.setProperty('--pref-size',profile.preferredBand[1]-profile.preferredBand[0]);
-        $('#preferred-band-label').textContent=`Preferred range · ${profile.preferredBand[0]}–${profile.preferredBand[1]}% reserve`;
-      }else{
-        gauge.style.setProperty('--pref-size',0);
-        $('#preferred-band-label').textContent=profile
-          ? 'Preferred range · research + plant learning pending'
-          : 'Preferred range · learning';
-      }
-    }
-
-    window.__plantReserveG=reserveG;
-    window.__plantReservePercent=reservePercent;
-  }
-  updateWaterRange(recentRangeRows,latest);
-
-  const count=Number(runSummary?.reading_count||summary?.reading_count||0);
-  $('#plant-intelligence-title').textContent='Learning '+plantName(p)+'.';
-  $('#plant-intelligence-copy').textContent=profile
-    ? `Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''}. The current Valencia-orange model treats the observed 14 → 8 → 6 → 3 g/day decline as experimental expected behaviour and uses ~18 g remaining as a provisional three-day reserve trigger. New cycles will refine that curve.`
-    : `Sykerbos has ${count.toLocaleString()} readings in the active run${latest?.run_id?' ('+latest.run_id+')':''} from ${device.device_code}. Historical runs remain stored separately for comparison.`;
-  $('#plant-learning-bar').style.width=Math.min(100,Math.round(count/20))+'%';
-  $('#plant-learning-note').textContent=count.toLocaleString()+' recorded readings';
-
-  const cycles=Number(p.cycles_observed||0);
-  const confidence=confidenceFromCycles(cycles);
-  $('#confidence-title').textContent=confidence.label;
-  $('#confidence-number').textContent=confidence.pct+'%';
-  $('#confidence-track-bar').style.width=confidence.pct+'%';
-  $('#confidence-copy').textContent=cycles
-    ? `${cycles} validated cycle${cycles===1?'':'s'} recorded. Confidence increases when future cycles reproduce the same thresholds and dry-down shape.`
-    : 'No automatically validated cycles yet. The current model is experimental evidence; the first repeatable irrigation/dry-down cycle will start increasing confidence.';
-  $('#evidence-cycles').textContent=cycles+' validated cycle'+(cycles===1?'':'s');
-
-  const dryThreshold=numericOrNull(p.learned_dry_g??p.provisional_dry_g);
-  const wetThreshold=numericOrNull(p.learned_saturated_g??p.provisional_saturated_g);
-  const triggerG=profile&&Number.isFinite(dryThreshold)?dryThreshold+profile.reserveTriggerG:null;
-  if(Number.isFinite(dryThreshold)) $('#intel-dry').textContent=dryThreshold.toFixed(0)+' g';
-  if(Number.isFinite(wetThreshold)) $('#intel-wet').textContent=wetThreshold.toFixed(0)+' g';
-  if(Number.isFinite(triggerG)) $('#intel-trigger').textContent=triggerG.toFixed(0)+' g';
-  if(Number.isFinite(current)) $('#intel-current').textContent=current.toFixed(1)+' g';
-
-  if(Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
-    // Reserve map reads left→right as wet/saturated → dry threshold.
-    const place=v=>Math.max(0,Math.min(100,((wetThreshold-v)/(wetThreshold-dryThreshold))*100));
-    $('#reserve-wet-marker').style.left='0%';
-    $('#reserve-dry-marker').style.left='100%';
-    $('#reserve-wet-label').style.left='0%';
-    $('#reserve-dry-label').style.left='100%';
-
-    if(Number.isFinite(triggerG)){
-      const triggerPos=place(triggerG);
-      $('#reserve-trigger-marker').style.left=triggerPos+'%';
-      $('#reserve-trigger-label').style.left=triggerPos+'%';
-    }
-    if(Number.isFinite(current)){
-      const currentPos=place(current);
-      $('#reserve-current-marker').style.left=currentPos+'%';
-      $('#reserve-current-label').style.left=currentPos+'%';
-    }
-
-    $('#evidence-reserve').textContent=(p.learned_dry_g!=null||p.learned_saturated_g!=null)
-      ? 'Learned thresholds in use'
-      : 'Experimental '+dryThreshold.toFixed(0)+'–'+wetThreshold.toFixed(0)+' g';
-  }
-
-  if(profile){
-    $('#evidence-next').textContent=cycles<1
-      ? 'Capture the first validated full cycle'
-      : 'Repeat the cycle and compare thresholds';
-  }
-
-  const rangeButtons=[...document.querySelectorAll('.range-pills button')];
-  const hoursFor={'24h':24,'7d':168,'30d':720};
-  rangeButtons.forEach(button=>button.addEventListener('click',async()=>{
-    rangeButtons.forEach(b=>b.classList.toggle('active',b===button));
-    await loadRange(device.id,hoursFor[button.textContent.trim()]||24,latest?.run_id||null);
-  }));
-  await loadRange(device.id,24,latest?.run_id||null);
-
-  // Keep the current weight and its measured range together while this page is open.
-  let refreshing=false;
-  let displayedStamp=stampOf(latest),displayedWeight=latest?.weight_g;
-  async function refreshCurrentReading(){
-    if(refreshing||document.hidden) return;
-    refreshing=true;
-    try{
-      const {data:latestRows,error}=await supabase.from('readings')
-        .select('weight_g,temperature_c,measured_at,created_at,run_id')
-        .eq('device_id',device.id)
-        .order('measured_at',{ascending:false,nullsFirst:false})
-        .order('created_at',{ascending:false}).limit(1);
-      if(error) throw error;
-      const newest=latestRows?.[0];
-      if(!newest) return;
-      if((newest.run_id||null)!==(latest?.run_id||null)){
-        $('#plant-summary').textContent='A new measurement run has started. Reload this page to view its readings separately.';
-        return;
-      }
-      const freshNow=stampOf(newest)&&(Date.now()-timeOf(newest)<90*60000);
-      $('#plant-status').textContent=maintenance?'Maintenance':freshNow?'Connected':'Last seen '+ageLabel(stampOf(newest));
-      $('#plant-status').className='status '+(maintenance?'offline':freshNow?'good':'learning');
-      if(stampOf(newest)===displayedStamp&&newest.weight_g===displayedWeight) return;
-      let rangeQuery=supabase.from('readings')
-        .select('weight_g,measured_at,created_at,run_id').eq('device_id',device.id)
-        .order('measured_at',{ascending:false,nullsFirst:false})
-        .order('created_at',{ascending:false}).limit(72);
-      if(newest.run_id) rangeQuery=rangeQuery.eq('run_id',newest.run_id);
-      const {data:rangeRows,error:rangeError}=await rangeQuery;
-      if(rangeError) throw rangeError;
-      updateWaterRange(rangeRows||[],newest);
-      $('#plant-weight').textContent=fmt(newest.weight_g)+' g';
-      $('#plant-temperature').textContent=fmt(newest.temperature_c)+' °C';
-      $('#intel-current').textContent=Number.isFinite(current)?current.toFixed(1)+' g':'—';
-      if(Number.isFinite(current)&&Number.isFinite(dryThreshold)&&Number.isFinite(wetThreshold)&&wetThreshold>dryThreshold){
-        const position=Math.max(0,Math.min(100,((wetThreshold-current)/(wetThreshold-dryThreshold))*100));
-        $('#reserve-current-marker').style.left=position+'%';
-        $('#reserve-current-label').style.left=position+'%';
-      }
-      displayedStamp=stampOf(newest);displayedWeight=newest.weight_g;
-      const selected=rangeButtons.find(button=>button.classList.contains('active'));
-      await loadRange(device.id,hoursFor[selected?.textContent.trim()]||24,newest.run_id||null);
-    }catch(error){console.error('Could not refresh plant readings',error);}
-    finally{refreshing=false;}
-  }
-  const refreshTimer=setInterval(refreshCurrentReading,60000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden) refreshCurrentReading();});
-  window.addEventListener('pagehide',()=>clearInterval(refreshTimer),{once:true});
+  $('#water-vytile-button').href=demo?'watering.html?demo=1':'watering.html?plant='+encodeURIComponent(plant.id);
+  if(demo){render();return;}
+  await refresh();const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
 }
-
-init();
+init().catch(error=>{$('#plant-summary').textContent=error.message||'This plant could not be loaded.';console.error(error);});
