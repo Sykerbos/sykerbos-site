@@ -1,13 +1,14 @@
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=2';
+import {plantChartModel} from './plant-chart-model.js?v=1';
 
 const $=s=>document.querySelector(s);
 const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n).toFixed(d):'—';
 const stamp=r=>r?.measured_at||r?.created_at;
 const time=r=>Date.parse(stamp(r));
 const name=p=>p.nickname||p.common_name||'Your plant';
-let plant=null,device=null,rows=[],count=0,rangeHours=24,latestKey='',loading=false;
+let plant=null,device=null,rows=[],count=0,chartRange='cycle',latestKey='',loading=false;
 const demo=new URLSearchParams(location.search).get('demo')==='watering';
 function age(t){
   if(!Number.isFinite(t))return 'No reading';
@@ -23,23 +24,29 @@ tabs.forEach(button=>button.addEventListener('click',()=>{
 }));
 const requested=tabs.find(b=>b.dataset.tab===location.hash.slice(1));if(requested)requested.click();
 document.querySelectorAll('.range-pills button').forEach(button=>button.addEventListener('click',()=>{
-  document.querySelectorAll('.range-pills button').forEach(b=>b.classList.toggle('active',b===button));
-  rangeHours={'24h':24,'7d':168,'30d':720}[button.textContent.trim()]||24;render();
+  document.querySelectorAll('.range-pills button').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});
+  chartRange=button.dataset.range;render();
 }));
 function chart(view){
-  const latestTime=view.latest?.t||Date.now(),cutoff=latestTime-rangeHours*3600000;
-  const visible=rows.filter(r=>time(r)>=cutoff&&time(r)<=latestTime).sort((a,b)=>time(a)-time(b));
-  const pot=visible.filter(r=>Number(r.weight_g)>=view.emptyFloor);
-  if(pot.length<2){$('#plant-chart').innerHTML='<div class="chart-loading">More pot readings are needed for this range.</div>';return;}
-  const weights=pot.map(r=>Number(r.weight_g)),lo=Math.min(...weights),hi=Math.max(...weights),span=Math.max(1,time(visible.at(-1))-time(visible[0]));
-  const point=r=>[28+(time(r)-time(visible[0]))/span*844,28+(hi-Number(r.weight_g))/Math.max(1,hi-lo)*244];
-  let path='',gap=true;
-  for(const r of visible){if(Number(r.weight_g)<view.emptyFloor){gap=true;continue;}const [x,y]=point(r);path+=(gap?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';gap=false;}
+  const model=plantChartModel(rows,view,{range:chartRange});
+  const {rows:visible,pot,lo,hi,start,end,refill:event}=model;
+  if(pot.length<2){$('#plant-chart').innerHTML='<div class="chart-loading">More pot readings are needed for this range.</div>';$('#plant-chart-note').textContent='Waiting for more pot readings.';$('#plant-chart-dates').textContent='';return;}
+  const span=Math.max(1,end-start);
+  const point=r=>[28+(time(r)-start)/span*844,28+(hi-Number(r.weight_g))/(hi-lo)*244];
+  let path='',gap=true,previousTime=null;
+  for(const r of visible){
+    if(Number(r.weight_g)<view.emptyFloor){gap=true;continue;}
+    if(previousTime!==null&&time(r)-previousTime>90*60000)gap=true;
+    const [x,y]=point(r);path+=(gap?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';gap=false;previousTime=time(r);
+  }
   let marker='';
-  const event=visible.find(r=>time(r)===view.cycle.refill?.at);
-  if(event){const [x,y]=point(event);marker=`<line x1="${x}" y1="28" x2="${x}" y2="272" stroke="#b63969" stroke-dasharray="5 5"/><circle cx="${x}" cy="${y}" r="5" fill="#b63969"/><text x="${Math.min(810,Math.max(35,x-45))}" y="44" fill="#753a51" font-size="14">Refill</text>`;}
-  $('#plant-chart').innerHTML=`<svg viewBox="0 0 900 300" role="img" aria-label="Pot weight history; empty-tile readings omitted"><path d="${path}" class="plant-live-line"/>${marker}</svg><span class="plant-y top">${fmt(hi,0)} g</span><span class="plant-y bottom">${fmt(lo,0)} g</span>`;
-  $('#plant-chart-note').textContent=`${pot.length} pot readings · ${rangeHours<48?'24 hours':rangeHours/24+' days'} · empty-tile readings omitted`;
+  if(event){const [x,y]=point(event);marker=`<line x1="${x}" y1="28" x2="${x}" y2="272" stroke="#b63969" stroke-dasharray="5 5"/><circle cx="${x}" cy="${y}" r="5" fill="#b63969"/><text x="${Math.min(730,Math.max(35,x+10))}" y="64" fill="#753a51" font-size="14">Watering detected</text>`;}
+  $('#plant-chart').innerHTML=`<svg viewBox="0 0 900 300" role="img" aria-label="Pot weight history from ${new Date(start).toLocaleString()} to ${new Date(end).toLocaleString()}; empty-tile readings omitted"><path d="${path}" class="plant-live-line"/>${marker}</svg><span class="plant-y top">${fmt(hi,0)} g</span><span class="plant-y bottom">${fmt(lo,0)} g</span>`;
+  const date=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  $('#plant-chart-dates').replaceChildren(...[start,end].map(t=>{const el=document.createElement('span');el.textContent=date(t);return el;}));
+  const rangeNote=chartRange==='cycle'?(model.cycleFound?'Latest detected watering → now':'Last 7 days · no watering detected in loaded history'):chartRange==='24'?'Last 24 hours':`Last ${Number(chartRange)/24} days`;
+  $('#plant-chart-note').textContent=`${rangeNote} · ${pot.length} pot readings · empty-tile readings omitted`;
+
 }
 function eventList(view){
   const host=$('#event-list');host.replaceChildren();
@@ -145,6 +152,10 @@ async function init(){
     plant={id:'demo',nickname:'Pot B',common_name:'Valencia Orange Seedling',botanical_name:'Citrus × sinensis',learned_saturated_g:629,provisional_dry_g:525,cycles_observed:0};
     device={device_code:'DemoTile'};
     const now=Date.now();rows=Array.from({length:289},(_,i)=>({weight_g:i<285?558-i*.1:i===285?11.5:i===286?656.2:i===287?633.4:629,temperature_c:22.7,measured_at:new Date(now-(288-i)*20*60000).toISOString(),run_id:'DEMO-REFILL'}));
+    if(new URLSearchParams(location.search).get('trend')==='drydown'){
+      plant.learned_saturated_g=640;
+      rows=Array.from({length:289},(_,i)=>({weight_g:i<72?550-i*.1:640-(i-72)*.19,temperature_c:22.7,measured_at:new Date(now-(288-i)*20*60000).toISOString(),run_id:'DEMO-DRYDOWN'}));
+    }
     const percent=new URLSearchParams(location.search).get('reserve');if(percent!==null&&Number.isFinite(Number(percent)))rows.at(-1).weight_g=525+104*Math.max(0,Math.min(100,Number(percent)))/100;
     count=rows.length;
   }else{

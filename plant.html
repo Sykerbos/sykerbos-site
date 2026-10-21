@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261018-reserve-2">
+  <link rel="stylesheet" href="plant.css?v=20261021-cycle-chart-1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -58,14 +58,16 @@
           <div class="panel-heading">
             <div><p class="eyebrow">Today</p><h2>Weight trend</h2></div>
             <div class="range-pills" aria-label="Chart range">
-              <button class="active" type="button">24h</button>
-              <button type="button">7d</button>
-              <button type="button">30d</button>
+              <button class="active" data-range="cycle" type="button" aria-pressed="true">Since watering</button>
+              <button data-range="24" type="button" aria-pressed="false">24h</button>
+              <button data-range="168" type="button" aria-pressed="false">7d</button>
+              <button data-range="720" type="button" aria-pressed="false">30d</button>
             </div>
           </div>
           <div class="plant-chart" id="plant-chart" aria-label="Live plant weight curve">
             <div class="chart-loading">Loading live history…</div>
           </div>
+          <div class="plant-chart-dates" id="plant-chart-dates"></div>
           <div class="chart-summary intelligence-summary">
             <div><small>Current use</small><strong id="plant-current-rate">—</strong><span id="plant-current-rate-note">Learning dry-down rate</span></div>
             <div><small>Recent movement</small><strong id="plant-recent-movement">—</strong><span id="plant-recent-movement-note">Last 12 hours</span></div>
@@ -195,6 +197,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261018-reserve-2"></script>
+  <script type="module" src="plant.js?v=20261021-cycle-chart-1"></script>
 </body>
 </html>
