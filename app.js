@@ -1,7 +1,7 @@
 import { supabase } from './supabase-client.js';
 import { plantAssetFor } from './plant-assets.js';
 import { reserveState, reserveMarkup } from './water-reserve.js?v=1';
-import { irrigationState } from './irrigation-state.js?v=2';
+import { irrigationState } from './irrigation-state.js?v=3';
 
 const $=selector=>document.querySelector(selector);
 const fmt=(value,digits=1)=>{

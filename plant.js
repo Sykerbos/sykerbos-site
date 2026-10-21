@@ -1,7 +1,7 @@
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
-import {plantState} from './plant-state.js?v=2';
-import {plantChartModel} from './plant-chart-model.js?v=1';
+import {plantState} from './plant-state.js?v=3';
+import {plantChartModel} from './plant-chart-model.js?v=2';
 
 const $=s=>document.querySelector(s);
 const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n).toFixed(d):'—';
@@ -35,7 +35,7 @@ function chart(view){
   const point=r=>[28+(time(r)-start)/span*844,28+(hi-Number(r.weight_g))/(hi-lo)*244];
   let path='',gap=true,previousTime=null;
   for(const r of visible){
-    if(Number(r.weight_g)<view.emptyFloor){gap=true;continue;}
+    if(Number(r.weight_g)<view.emptyFloor||model.spikes.has(r)){gap=true;continue;}
     if(previousTime!==null&&time(r)-previousTime>90*60000)gap=true;
     const [x,y]=point(r);path+=(gap?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';gap=false;previousTime=time(r);
   }
@@ -45,7 +45,7 @@ function chart(view){
   const date=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
   $('#plant-chart-dates').replaceChildren(...[start,end].map(t=>{const el=document.createElement('span');el.textContent=date(t);return el;}));
   const rangeNote=chartRange==='cycle'?(model.cycleFound?'Latest detected watering → now':'Last 7 days · no watering detected in loaded history'):chartRange==='24'?'Last 24 hours':`Last ${Number(chartRange)/24} days`;
-  $('#plant-chart-note').textContent=`${rangeNote} · ${pot.length} pot readings · empty-tile readings omitted`;
+  $('#plant-chart-note').textContent=`${rangeNote} · ${pot.length} pot readings · empty-tile readings omitted${model.excludedSpikes?` · ${model.excludedSpikes} temporary spike${model.excludedSpikes===1?'':'s'} omitted`: ''}`;
 
 }
 function eventList(view){
@@ -155,6 +155,10 @@ async function init(){
     if(new URLSearchParams(location.search).get('trend')==='drydown'){
       plant.learned_saturated_g=640;
       rows=Array.from({length:289},(_,i)=>({weight_g:i<72?550-i*.1:640-(i-72)*.19,temperature_c:22.7,measured_at:new Date(now-(288-i)*20*60000).toISOString(),run_id:'DEMO-DRYDOWN'}));
+    }
+    if(new URLSearchParams(location.search).get('trend')==='handling'){
+      const weights=[529.9,11.5,641.2,639.8,656.2,636.6,633.4,629,630.9,629.3,628.1,628.1,798.6,635.6,650.4,631.1,628.4];
+      rows=Array.from({length:210},(_,i)=>({weight_g:weights[i]??(628.4-(i-16)*.18),temperature_c:22.7,measured_at:new Date(now-(209-i)*20*60000).toISOString(),run_id:'DEMO-HANDLING'}));
     }
     const percent=new URLSearchParams(location.search).get('reserve');if(percent!==null&&Number.isFinite(Number(percent)))rows.at(-1).weight_g=525+104*Math.max(0,Math.min(100,Number(percent)))/100;
     count=rows.length;

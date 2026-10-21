@@ -1,4 +1,5 @@
-import {irrigationState} from './irrigation-state.js?v=2';
+import {transientWeightSpikes} from './reading-quality.js?v=1';
+import {irrigationState} from './irrigation-state.js?v=3';
 import {observedHighUse,numberOrNull} from './watering-model.js?v=4';
 export function plantState(plant,readings,{now=Date.now(),maintenance=false}={}){
   const dry=numberOrNull(plant.learned_dry_g??plant.provisional_dry_g),wet=numberOrNull(plant.learned_saturated_g??plant.provisional_saturated_g);
@@ -7,7 +8,8 @@ export function plantState(plant,readings,{now=Date.now(),maintenance=false}={})
   const emptyFloor=Math.max(50,dry===null?0:dry*.5);
   const run=latest?.run_id??null;
   const rows=(readings||[]).filter(r=>(r.run_id??null)===run).sort((a,b)=>Date.parse(a.measured_at||a.created_at)-Date.parse(b.measured_at||b.created_at));
-  const potRows=rows.filter(r=>numberOrNull(r.weight_g)!==null&&Number(r.weight_g)>=emptyFloor);
+  const spikes=transientWeightSpikes(rows,{dry,wet,emptyFloor});
+  const potRows=rows.filter(r=>numberOrNull(r.weight_g)!==null&&Number(r.weight_g)>=emptyFloor&&!spikes.has(r));
   const recent=potRows.slice(-72).map(r=>Number(r.weight_g));
   const known=dry!==null&&wet!==null&&wet>dry;
   const reserve=known&&fresh&&!maintenance&&!cycle.potRemoved?Math.min(wet-dry,Math.max(0,latest.w-dry)):null;
