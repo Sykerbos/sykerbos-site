@@ -1,3 +1,4 @@
+import {collectionDemo} from './collection-demo.js?v=1';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=3';
@@ -161,7 +162,11 @@ async function init(){
       rows=Array.from({length:210},(_,i)=>({weight_g:weights[i]??(628.4-(i-16)*.18),temperature_c:22.7,measured_at:new Date(now-(209-i)*20*60000).toISOString(),run_id:'DEMO-HANDLING'}));
     }
     const percent=new URLSearchParams(location.search).get('reserve');if(percent!==null&&Number.isFinite(Number(percent)))rows.at(-1).weight_g=525+104*Math.max(0,Math.min(100,Number(percent)))/100;
+    const sample=collectionDemo().find(p=>p.id===new URLSearchParams(location.search).get('collection'));
+    if(sample){plant={...sample,cycles_observed:0};device=sample.device;rows=sample.history;}
     count=rows.length;
+    document.querySelectorAll('a[href="app.html"],a[href="plants.html"]').forEach(a=>a.href='app.html?demo=collection');
+    document.querySelectorAll('a[href="herbarium.html"]').forEach(a=>a.href='herbarium.html?demo=1');
   }else{
     const {data:{session}}=await supabase.auth.getSession();if(!session){location.replace('account.html');return;}
     const id=new URLSearchParams(location.search).get('plant');let q=supabase.from('plants').select('*').eq('user_id',session.user.id);q=id?q.eq('id',id):q.eq('is_primary',true);

@@ -3,12 +3,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {collectionModel} from '../collection-model.js';
 import {plantAssetFor} from '../plant-assets.js';
+import {collectionDemo} from '../collection-demo.js';
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/init\(\)\.catch\([\s\S]*$/,'');
 function run(search){
  const elements=new Map();
  const el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',hidden:false,addEventListener(){},setAttribute(){}});return elements.get(id);};
  const document={querySelector:el,querySelectorAll:()=>[]};
- const context=vm.createContext({document,location:{search},URLSearchParams,Date,Map,Set,console,collectionModel,plantAssetFor});
+ const context=vm.createContext({document,location:{search},URLSearchParams,Date,Map,Set,console,collectionModel,plantAssetFor,collectionDemo});
  vm.runInContext(source+'\ncollection=demoPlants();render();',context);
  return {html:el('#plant-list').innerHTML,context,elements};
 }

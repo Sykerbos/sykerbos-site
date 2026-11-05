@@ -1,6 +1,7 @@
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {collectionModel} from './collection-model.js?v=1';
+import {collectionDemo} from './collection-demo.js?v=1';
 const $=s=>document.querySelector(s);
 const demo=['collection','watering'].includes(new URLSearchParams(location.search).get('demo'));
 const stamp=r=>r?.measured_at||r?.created_at;
@@ -20,14 +21,14 @@ function sparkline(model){
  return `<svg viewBox="0 0 500 92" role="img" aria-label="${chart.cycleFound?'Weight trend since the latest detected watering':'Recent weight trend'}"><path d="${d}"/>${event?`<circle cx="${event[0]}" cy="${event[1]}" r="4"/>`:''}</svg>`;
 }
 function card(p){
- const m=p.model,v=m.view,asset=plantAssetFor(p),plantLink=demo?'plant.html?demo=watering&trend=drydown':'plant.html?plant='+encodeURIComponent(p.id),waterLink=demo?'watering.html?demo=1':'watering.html?plant='+encodeURIComponent(p.id);
+ const m=p.model,v=m.view,asset=plantAssetFor(p),plantLink=demo?'plant.html?demo=watering&collection='+encodeURIComponent(p.id):'plant.html?plant='+encodeURIComponent(p.id),waterLink=demo?'watering.html?demo=1':'watering.html?plant='+encodeURIComponent(p.id);
  const estimate=m.days===null?(m.percent===null?'Following your plant':'Water reserve'):v.state==='low'?'Time for a check':`About ${m.days} day${m.days===1?'':'s'} in reserve`;
  const state=m.priority===0?'attention':!v.fresh||v.maintenance?'offline':'growing';
  const last=v.cycle.refill?new Date(v.cycle.refill.at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):null;
  const lastCopy=last?`Watered ${last}`:'Following the current dry-down';
  const refillText=m.refill===null?'—':`${Math.round(m.refill)} mL`;
  const measurements=`<dl><div><dt>Current weight</dt><dd>${number(v.latest?.w)} g</dd></div><div><dt>Temperature</dt><dd>${number(v.latest?.temperature_c)} °C</dd></div><div><dt>Current daily loss</dt><dd>${number(v.rate)} g/day</dd></div><div><dt>Planning daily loss</dt><dd>${number(v.usage.rate)} g/day</dd></div><div><dt>Refill to saved full weight</dt><dd>${refillText}</dd></div><div><dt>Full weight</dt><dd>${number(v.wet,0)} g</dd></div><div><dt>Dry weight${p.learned_dry_g==null?' · setup value':''}</dt><dd>${number(v.dry,0)} g</dd></div><div><dt>Reliable days</dt><dd>${v.usage.qualifyingDays}</dd></div></dl>`;
- return `<article class="collection-plant ${state}"><a class="collection-photo" href="${plantLink}" aria-label="Open ${safe(title(p))}">${asset?`<img src="${asset.image}" alt="" loading="lazy">`:`<span class="collection-monogram">${safe(title(p).slice(0,1))}</span>`}<span class="collection-status">${safe(m.label)}</span></a><div class="collection-copy"><div class="collection-heading"><div><p class="collection-species">${safe(p.common_name||p.device?.device_code||'Your plant')}</p><h2><a href="${plantLink}">${safe(title(p))}</a></h2><p class="collection-estimate">${estimate}</p></div><div class="collection-reserve ${m.percent===null?'unknown':''}" style="--reserve:${m.percent??0}%" role="img" aria-label="${m.percent===null?'Water reserve unavailable':`Estimated water reserve ${m.percent} percent`}"><span>${m.percent===null?'—':m.percent+'%'}<small>reserve</small></span></div></div><div class="collection-trend">${sparkline(m)}</div><div class="collection-trend-meta"><span>${lastCopy}</span><span>${safe(age(v.latest?.t))}</span></div><div class="collection-actions"><a class="button" href="${waterLink}">${!v.fresh||v.maintenance?'Open VyTile':'Water plant'} <span aria-hidden="true">↗</span></a><a class="text-link" href="${plantLink}">Plant story →</a></div><details class="collection-measurements" data-plant="${safe(p.id)}"><summary>Measurements & calculations</summary>${measurements}<p>Reserve compares the current weight with this pot’s saved full and dry weights. Days use its higher-use measured days; loss includes evaporation.</p></details></div></article>`;
+ return `<article class="collection-plant ${state}"><a class="collection-photo" href="${plantLink}" aria-label="Open ${safe(title(p))}">${asset?`<img src="${asset.image}" alt="" loading="lazy">`:`<span class="collection-monogram">${safe(title(p).slice(0,1))}</span>`}<span class="collection-status">${safe(m.label)}</span></a><div class="collection-copy"><div class="collection-heading"><div><p class="collection-species">${safe(p.common_name||p.device?.device_code||'Your plant')}</p><h2><a href="${plantLink}">${safe(title(p))}</a></h2><p class="collection-estimate">${estimate}</p></div><div class="collection-reserve ${m.percent===null?'unknown':''}" style="--reserve:${m.percent??0}%" role="img" aria-label="${m.percent===null?'Water reserve unavailable':`Estimated water reserve ${m.percent} percent`}"><span>${m.percent===null?'—':m.percent+'%'}<small>reserve</small></span></div></div><div class="collection-trend">${sparkline(m)}</div><div class="collection-trend-meta"><span>${lastCopy}</span><span>${safe(age(v.latest?.t))}</span></div><div class="collection-actions"><a class="button" href="${waterLink}">${demo?'Try watering':!v.fresh||v.maintenance?'Open VyTile':'Water plant'} <span aria-hidden="true">↗</span></a><a class="text-link" href="${plantLink}">Plant story →</a></div><details class="collection-measurements" data-plant="${safe(p.id)}"><summary>Measurements & calculations</summary>${measurements}<p>Reserve compares the current weight with this pot’s saved full and dry weights. Days use its higher-use measured days; loss includes evaporation.</p></details></div></article>`;
 }
 function render(){
  const opened=new Set([...document.querySelectorAll('.collection-measurements[open]')].map(el=>el.dataset.plant));
@@ -37,7 +38,7 @@ function render(){
  const online=plants.filter(p=>p.model.view.fresh&&!p.model.view.maintenance).length;
  $('#collection-summary').textContent=plants.length?`${plants.length} plant${plants.length===1?'':'s'} · ${online} VyTile${online===1?'':'s'} reporting`:'Your garden starts here.';
  $('#device-summary').textContent=plants.length?`${online} of ${plants.filter(p=>p.device).length} VyTiles reporting`:'Connect your first VyTile.';
- if(demo)document.querySelectorAll('a[href="herbarium.html"]').forEach(a=>a.href='herbarium.html?demo=1');
+ if(demo){document.querySelectorAll('a[href="herbarium.html"]').forEach(a=>a.href='herbarium.html?demo=1');document.querySelectorAll('a[href="app.html"]').forEach(a=>a.href='app.html?demo=collection');}
 }
 async function loadHistory(device,latest){
  const key=JSON.stringify([stamp(latest),latest.weight_g,latest.run_id]);
@@ -62,15 +63,7 @@ async function loadPlantData(){
   const latest=result.data?.[0];return {...p,device,history:latest?await loadHistory(device,latest):[]};
  }));render();
 }
-function demoPlants(){
- const now=Date.now(),scenario=new URLSearchParams(location.search).get('state');
- return [{id:'demo-a',nickname:'Pot A',wet:640,end:575.3},{id:'demo-b',nickname:'Pot B',wet:629,end:548.8}].map((p,index)=>{
-  const history=Array.from({length:1585},(_,i)=>{const since=i-1224;return {weight_g:i<288?550-i*.06:i<1224?p.wet-(i-288)*.12:p.wet-(p.wet-p.end)*since/360,temperature_c:21.2,measured_at:new Date(now-(1584-i)*1200000).toISOString(),run_id:'DEMO-COLLECTION'};});
-  if(index===1&&scenario==='offline')history.forEach(r=>r.measured_at=new Date(time(r)-6*3600000).toISOString());
-  if(index===1&&scenario==='removed')history.at(-1).weight_g=0;
-  return {id:p.id,nickname:p.nickname,common_name:'Valencia Orange Seedling',learned_saturated_g:scenario==='learning'&&index===1?null:p.wet,provisional_dry_g:525,display_order:index,device:{id:p.id,device_code:index?'Mini02':'Mini01'},history};
- });
-}
+function demoPlants(){return collectionDemo(new URLSearchParams(location.search).get('state'));}
 async function refresh(){if(refreshing||document.hidden)return;refreshing=true;try{await loadPlantData();$('#collection-error').hidden=true;}catch(error){console.error(error);$('#collection-error').textContent=collection.length?'Could not refresh. Showing the last loaded readings.':'Could not load your plants. Reload this page to try again.';$('#collection-error').hidden=false;$('#collection-summary').textContent='Connection interrupted';}finally{refreshing=false;}}
 async function init(){
  if(demo){$('#dashboard-demo-notice').hidden=false;$('#profile-button').textContent='D';$('#profile-button').setAttribute('aria-label','Demo account');collection=demoPlants();render();return;}
