@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import {collectionModel} from '../collection-model.js';
+import {plantAssetFor} from '../plant-assets.js';
+const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/init\(\)\.catch\([\s\S]*$/,'');
+function run(search){
+ const elements=new Map();
+ const el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',hidden:false,addEventListener(){},setAttribute(){}});return elements.get(id);};
+ const document={querySelector:el,querySelectorAll:()=>[]};
+ const context=vm.createContext({document,location:{search},URLSearchParams,Date,Map,Set,console,collectionModel,plantAssetFor});
+ vm.runInContext(source+'\ncollection=demoPlants();render();',context);
+ return {html:el('#plant-list').innerHTML,context,elements};
+}
+const basic=run('?demo=collection');
+assert.equal((basic.html.match(/<article class="collection-plant /g)||[]).length,2);
+assert.ok(basic.html.indexOf('Pot B')<basic.html.indexOf('Pot A'));
+assert.match(basic.html,/Measurements & calculations/);assert.match(basic.html,/About \d days in reserve/);
+assert.doesNotMatch(basic.html,/NaN|undefined|Experimental|wilting/);
+vm.runInContext('collection[0].nickname="<img src=x onerror=alert(1)>";render();',basic.context);
+assert.doesNotMatch(basic.elements.get('#plant-list').innerHTML,/<img src=x/);
+assert.match(run('?demo=collection&state=offline').html,/Offline/);
+assert.match(run('?demo=collection&state=removed').html,/Pot lifted/);
+assert.match(run('?demo=collection&state=learning').html,/Learning reserve/);
+console.log('Passed: both plants, reserve ordering, optional calculations, safe user text, and offline/removed/learning card rendering.');

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {collectionModel} from '../collection-model.js';
+const now=Date.parse('2026-11-05T01:12:00Z');
+const rows=Array.from({length:361},(_,i)=>({weight_g:640-i*.18,measured_at:new Date(now-(360-i)*1200000).toISOString(),run_id:'one'}));
+const plant={learned_saturated_g:640,provisional_dry_g:525};
+const m=collectionModel(plant,rows,{now});
+assert.equal(m.percent,44);assert.ok(Math.abs(m.refill-64.8)<1e-8);assert.ok(m.days>=3&&m.days<=5);assert.equal(m.priority,3);
+assert.ok(m.chart.hi>=640);assert.equal(m.chart.lo,525);
+const low=collectionModel(plant,[{weight_g:540,measured_at:new Date(now).toISOString(),run_id:'one'}],{now});assert.equal(low.priority,0);assert.equal(low.label,'Ready for a refill');
+const off=collectionModel(plant,rows,{now:now+2*3600000});assert.equal(off.percent,null);assert.equal(off.days,null);assert.equal(off.refill,null);assert.equal(off.label,'Offline');
+const removed=collectionModel(plant,[...rows,{weight_g:0,measured_at:new Date(now+1000).toISOString(),run_id:'one'}],{now:now+1000});assert.equal(removed.label,'Pot lifted');assert.equal(removed.refill,null);assert.equal(removed.percent,null);
+const unknown=collectionModel({},rows,{now});assert.equal(unknown.label,'Learning reserve');assert.equal(unknown.days,null);
+const maintenance=collectionModel(plant,rows,{now,device:{status:'maintenance'}});assert.equal(maintenance.percent,null);assert.equal(maintenance.priority,4);
+console.log('Passed: collection estimates, refill amount, reference scale, attention ordering, offline, removed, unknown and maintenance states.');
