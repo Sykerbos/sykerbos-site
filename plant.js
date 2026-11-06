@@ -2,7 +2,8 @@ import {collectionDemo} from './collection-demo.js?v=1';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=3';
-import {plantChartModel} from './plant-chart-model.js?v=2';
+import {plantTrendModel} from './plant-trend-model.js?v=1';
+import {plantTrendSvg} from './plant-trend-render.js?v=1';
 
 const $=s=>document.querySelector(s);
 const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n).toFixed(d):'—';
@@ -28,27 +29,23 @@ document.querySelectorAll('.range-pills button').forEach(button=>button.addEvent
   document.querySelectorAll('.range-pills button').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});
   chartRange=button.dataset.range;render();
 }));
+const chartLayers={previous:true,temperature:true,forecast:true};
+document.querySelectorAll('[data-chart-layer]').forEach(button=>button.addEventListener('click',()=>{const key=button.dataset.chartLayer;chartLayers[key]=!chartLayers[key];button.setAttribute('aria-pressed',String(chartLayers[key]));render();}));
 function chart(view){
-  const model=plantChartModel(rows,view,{range:chartRange});
-  const {rows:visible,pot,lo,hi,start,end,refill:event}=model;
-  if(pot.length<2){$('#plant-chart').innerHTML='<div class="chart-loading">More pot readings are needed for this range.</div>';$('#plant-chart-note').textContent='Waiting for more pot readings.';$('#plant-chart-dates').textContent='';return;}
-  const span=Math.max(1,end-start);
-  const point=r=>[28+(time(r)-start)/span*844,28+(hi-Number(r.weight_g))/(hi-lo)*244];
-  let path='',gap=true,previousTime=null;
-  for(const r of visible){
-    if(Number(r.weight_g)<view.emptyFloor||model.spikes.has(r)){gap=true;continue;}
-    if(previousTime!==null&&time(r)-previousTime>90*60000)gap=true;
-    const [x,y]=point(r);path+=(gap?'M':'L')+x.toFixed(1)+','+y.toFixed(1)+' ';gap=false;previousTime=time(r);
-  }
-  let marker='';
-  if(event){const [x,y]=point(event);marker=`<line x1="${x}" y1="28" x2="${x}" y2="272" stroke="#b63969" stroke-dasharray="5 5"/><circle cx="${x}" cy="${y}" r="5" fill="#b63969"/><text x="${Math.min(730,Math.max(35,x+10))}" y="64" fill="#753a51" font-size="14">Watering detected</text>`;}
-  $('#plant-chart').innerHTML=`<svg viewBox="0 0 900 300" role="img" aria-label="Pot weight history from ${new Date(start).toLocaleString()} to ${new Date(end).toLocaleString()}; empty-tile readings omitted"><path d="${path}" class="plant-live-line"/>${marker}</svg><span class="plant-y top">${fmt(hi,0)} g</span><span class="plant-y bottom">${fmt(lo,0)} g</span>`;
-  const date=t=>new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  $('#plant-chart-dates').replaceChildren(...[start,end].map(t=>{const el=document.createElement('span');el.textContent=date(t);return el;}));
-  const rangeNote=chartRange==='cycle'?(model.cycleFound?'Latest detected watering → now':'Last 7 days · no watering detected in loaded history'):chartRange==='24'?'Last 24 hours':`Last ${Number(chartRange)/24} days`;
-  $('#plant-chart-note').textContent=`${rangeNote} · ${pot.length} pot readings · empty-tile readings omitted${model.excludedSpikes?` · ${model.excludedSpikes} temporary spike${model.excludedSpikes===1?'':'s'} omitted`: ''}`;
-
+  const model=plantTrendModel(rows,view,{range:chartRange});
+  const host=$('#plant-chart');
+  host.classList.add('plant-context-chart');
+  host.style.height=chartLayers.temperature&&model.temperature.length?'398px':'302px';
+  host.innerHTML=plantTrendSvg(model,{width:host.clientWidth||800,...chartLayers});
+  for(const layer of ['previous','temperature','forecast']){const button=document.querySelector(`[data-chart-layer="${layer}"]`);button.hidden=!model[layer].length;}
+  $('#plant-chart-dates').textContent='';
+  const date=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  $('#plant-chart-note').textContent=model.refill?`Last watered ${date(model.refill.t)}${model.forecast.length&&chartLayers.forecast?' · projected to '+date(model.plotEnd):''}`:'Measured weight history';
+  $('#plant-chart-method').textContent=(model.previousRefill?'The lighter line shows the previous cycle at its original dates and weights. ':'')+(model.method==='cycle-adjusted'?'The dashed projection uses the previous cycle’s pattern, adjusted to the latest measured daily loss.':model.method==='recent-trend'?'The dashed projection continues the latest uninterrupted day’s measured loss.':'A projection appears after an uninterrupted day of fresh readings.')+' Temperature is measured context; it is not used as a demand multiplier. Empty-tile readings, isolated handling spikes and recording gaps are omitted from the weight lines.';
 }
+let chartWidth=0;
+new ResizeObserver(entries=>{const width=entries[0]?.contentRect.width||0;if(width>0&&Math.abs(width-chartWidth)>1){chartWidth=width;if(plant)render();}}).observe($('#plant-chart'));
+
 function eventList(view){
   const host=$('#event-list');host.replaceChildren();
   const events=[];

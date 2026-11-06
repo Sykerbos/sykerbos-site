@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261021-handling-chart-1">
+  <link rel="stylesheet" href="plant.css?v=20261105-trend-1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -58,11 +58,17 @@
           <div class="panel-heading">
             <div><p class="eyebrow">Today</p><h2>Weight trend</h2></div>
             <div class="range-pills" aria-label="Chart range">
-              <button class="active" data-range="cycle" type="button" aria-pressed="true">Since watering</button>
+              <button class="active" data-range="cycle" type="button" aria-pressed="true">Cycles</button>
               <button data-range="24" type="button" aria-pressed="false">24h</button>
               <button data-range="168" type="button" aria-pressed="false">7d</button>
               <button data-range="720" type="button" aria-pressed="false">30d</button>
             </div>
+          </div>
+          <div class="plant-chart-legend" aria-label="Chart layers">
+            <span class="trend-key"><i class="key-current" aria-hidden="true"></i>Current</span>
+            <button type="button" data-chart-layer="previous" aria-pressed="true"><i class="key-previous" aria-hidden="true"></i>Previous</button>
+            <button type="button" data-chart-layer="temperature" aria-pressed="true"><i class="key-temperature" aria-hidden="true"></i>Temperature</button>
+            <button type="button" data-chart-layer="forecast" aria-pressed="true"><i class="key-forecast" aria-hidden="true"></i>Projection</button>
           </div>
           <div class="plant-chart" id="plant-chart" aria-label="Live plant weight curve">
             <div class="chart-loading">Loading live history…</div>
@@ -74,6 +80,7 @@
             <div><small>Projected reserve</small><strong id="plant-projected-days">—</strong><span id="plant-projected-note">Learning plant curve</span></div>
           </div>
           <p class="panel-note" id="plant-chart-note">Live VyTile readings.</p>
+          <details class="plant-chart-about"><summary>About this graph</summary><p id="plant-chart-method"></p></details>
         </article>
 
         <aside class="today-side">
@@ -197,6 +204,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261105-collection-1"></script>
+  <script type="module" src="plant.js?v=20261105-trend-1"></script>
 </body>
 </html>
