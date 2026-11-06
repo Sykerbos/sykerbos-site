@@ -2,7 +2,7 @@ import {collectionDemo} from './collection-demo.js?v=1';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=3';
-import {plantTrendModel} from './plant-trend-model.js?v=1';
+import {plantTrendModel} from './plant-trend-model.js?v=2';
 import {plantTrendSvg} from './plant-trend-render.js?v=1';
 
 const $=s=>document.querySelector(s);
@@ -46,6 +46,24 @@ function chart(view){
 let chartWidth=0;
 new ResizeObserver(entries=>{const width=entries[0]?.contentRect.width||0;if(width>0&&Math.abs(width-chartWidth)>1){chartWidth=width;if(plant)render();}}).observe($('#plant-chart'));
 
+function renderCycles(cycles){
+  const host=$('#cycle-history'),opened=new Set([...host.querySelectorAll('article')].filter(el=>el.querySelector('details')?.open).map(el=>el.dataset.cycle));host.replaceChildren();
+  if(!cycles.length){const p=document.createElement('p');p.className='panel-note';p.textContent='Water your plant to begin its history.';host.append(p);return;}
+  const date=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  for(const [index,c] of [...cycles].reverse().entries()){
+    const article=document.createElement('article');article.className='cycle-history-card';article.dataset.cycle=String(c.at);
+    const badge=document.createElement('span');badge.className='cycle-history-status'+(c.completed?' completed':'');badge.textContent=c.completed?'Completed':'In progress';
+    const h=document.createElement('h3');h.textContent=c.completed?'Previous cycle'+(index>1?' · '+(cycles.length-index):''):'Current cycle';
+    const dates=document.createElement('p');dates.className='cycle-history-dates';dates.textContent=date(c.at)+' → '+(c.completed?date(c.endedAt):'latest reading');
+    const duration=document.createElement('strong');duration.className='cycle-history-duration';duration.textContent=fmt(c.days)+' days';
+    const weights=document.createElement('p');weights.className='cycle-history-weights';weights.textContent=fmt(c.startWeight)+' → '+fmt(c.endWeight)+' g';
+    const loss=document.createElement('p');loss.className='cycle-history-loss';loss.textContent=(c.netLoss>=0?'−':'+')+fmt(Math.abs(c.netLoss))+' g net change';
+    const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='Cycle details';details.open=opened.has(String(c.at));details.append(summary);
+    for(const text of [c.weightGain!==null?'Weight gained at watering: +'+fmt(c.weightGain)+' g':null,c.readings+' on-pot readings',c.gapHours?fmt(c.gapHours)+' h recording gap':null,c.handling?'Handling readings omitted':null]){if(text){const p=document.createElement('p');p.textContent=text;details.append(p);}}
+    article.append(badge,h,dates,duration,weights,loss,details);host.append(article);
+  }
+}
+
 function eventList(view){
   const host=$('#event-list');host.replaceChildren();
   const events=[];
@@ -88,24 +106,26 @@ function render(){
   $('#plant-action-title').textContent={maintenance:'Tile in maintenance.',removed:'Return the pot.',stale:'Waiting for a reading.',low:'Check your plant.',refill:'Recently watered.',drying:'Follow the dry-down.'}[view.state];
   $('#plant-action-copy').textContent={maintenance:'Historical readings remain available while the tile is in maintenance.',removed:'Return the pot to resume water reserve and dry-down readings.',stale:'Reconnect the tile before relying on its current reserve estimate.',low:'Reserve is low against the current references. Check the plant before watering, even if a recent refill was detected.',refill:'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.',drying:'Use the measured trend alongside your plant’s condition. Reserve days are estimates.'}[view.state];
 
-  $('#plant-intelligence-title').textContent='Learning '+name(plant)+'.';
-  $('#plant-intelligence-copy').textContent=`${count.toLocaleString()} readings in ${view.latest?.run_id||'this measurement run'}. Irrigation and handling changes are excluded from daily-use rates.`;
-  $('#plant-learning-bar').style.width=Math.min(100,Math.round(segment.length/36*100))+'%';
-  $('#plant-learning-note').textContent=segment.length+' reading'+(segment.length===1?'':'s')+' in the current uninterrupted dry-down';
+  const detected=plantTrendModel(rows,view).cycles;
+  const completed=detected.filter(c=>c.completed).length,ongoing=detected.length-completed;
+  $('#plant-intelligence-title').textContent=name(plant)+'’s cycles.';
+  $('#plant-intelligence-copy').textContent=detected.length?`${detected.length} watering${detected.length===1?'':'s'} · ${completed} completed · ${ongoing} ongoing`:'Your first detected watering will start the cycle history.';
+  $('#plant-learning-note').textContent=`${view.latest?.run_id||'Current measurement run'} · ${count.toLocaleString()} readings${count>rows.length?' · latest '+rows.length.toLocaleString()+' loaded':''}`;
+  renderCycles(detected);
   $('#high-use-rate').textContent=view.usage.rate===null?'Learning':fmt(view.usage.rate);
   $('#high-use-days').textContent=String(view.usage.qualifyingDays);
   $('#new-cycle-readings').textContent=String(segment.length);
   $('#use-evidence').textContent=view.usage.qualifyingDays<7?'Early evidence':'Measured';
   $('#use-method-note').textContent=view.usage.rate===null?'At least 3 reliable full days are needed. No fixed species rate is assumed.':`g/day · average of the higher-use ${view.usage.usedDays} of ${view.usage.qualifyingDays} reliable days in this run. Weight loss includes evaporation.`;
   $('#intelligence-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';
-  const cycles=Math.max(0,Number(plant.cycles_observed)||0);
-  $('#confidence-title').textContent=cycles?'Recorded cycle evidence':'No recorded cycles yet';$('#confidence-number').textContent=String(cycles);
-  $('#confidence-track-bar').style.width=Math.min(100,cycles/8*100)+'%';
-  $('#confidence-copy').textContent='Recorded cycle count, not a percentage confidence or accuracy score. Detected refills do not automatically count as validated cycles.';
-  $('#evidence-cycles').textContent=cycles+' recorded cycles';
+  $('#confidence-title').textContent='Watering cycles';
+  $('#confidence-number').textContent=String(detected.length);
+  $('#cycles-completed').textContent=String(completed);
+  $('#cycles-ongoing').textContent=String(ongoing);
+  $('#evidence-cycles').textContent=`${completed} completed · ${ongoing} ongoing`;
   $('#evidence-slope').textContent=view.rate===null?'Dry-down rebuilding':fmt(view.rate)+' g/day measured';
-  $('#evidence-reserve').textContent=view.known?`${plant.learned_saturated_g!=null?'Saved':'Experimental'} full weight · ${plant.learned_dry_g!=null?'saved':'experimental'} dry reference`:'References still needed';
-  $('#evidence-next').textContent='Observe the next uninterrupted dry-down';
+  $('#evidence-reserve').textContent=view.known?`Full ${fmt(view.wet,0)} g · dry ${fmt(view.dry,0)} g`:'References still needed';
+  $('#evidence-next').textContent=ongoing?'Following the current cycle':'Waiting for the next watering';
   $('#intel-wet').textContent=fmt(view.wet,0)+' g';$('#intel-dry').textContent=fmt(view.dry,0)+' g';$('#intel-current').textContent=fmt(view.latest?.w)+' g';
   const trigger=view.known&&view.usage.rate>0?Math.min(view.wet,view.dry+view.usage.rate*3):null;
   $('#intel-trigger').textContent=fmt(trigger,0)+' g';
@@ -119,9 +139,9 @@ function render(){
   chart(view);eventList(view);
 }
 async function loadHistory(latest){
-  const result=[],cutoff=new Date(Date.now()-30*86400000).toISOString();
-  for(let offset=0;offset<5000;offset+=1000){
-    let q=supabase.from('readings').select('id,weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).gte('created_at',cutoff).order('created_at',{ascending:false}).order('id',{ascending:false});
+  const result=[];
+  for(let offset=0;offset<10000;offset+=1000){
+    let q=supabase.from('readings').select('id,weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).order('created_at',{ascending:false}).order('id',{ascending:false});
     q=latest.run_id?q.eq('run_id',latest.run_id):q.is('run_id',null);
     const {data,error}=await q.range(offset,offset+999);if(error)throw error;result.push(...(data||[]));if(!data||data.length<1000)break;
   }

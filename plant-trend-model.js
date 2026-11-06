@@ -17,7 +17,7 @@ function uninterrupted(points,start,end){
  return {first:a,last:b,loss:(a-b)/((end-start)/DAY)};
 }
 export function plantTrendModel(readings,view,{range='cycle'}={}){
- const end=view.latest?.t;if(!Number.isFinite(end))return {current:[],previous:[],temperature:[],forecast:[],ticks:[]};
+ const end=view.latest?.t;if(!Number.isFinite(end))return {current:[],previous:[],temperature:[],forecast:[],ticks:[],cycles:[]};
  const run=view.latest.run_id??null;
  const points=(readings||[]).map(r=>({...r,t:Date.parse(r.measured_at||r.created_at),w:val(r.weight_g),temp:val(r.temperature_c)})).filter(p=>(p.run_id??null)===run&&Number.isFinite(p.t)&&p.t<=end&&p.w!==null).sort((a,b)=>a.t-b.t);
  const spikes=transientWeightSpikes(points,{dry:view.dry,wet:view.wet,emptyFloor:view.emptyFloor});
@@ -28,6 +28,15 @@ export function plantTrendModel(readings,view,{range='cycle'}={}){
   const a=clean[i-1],b=clean[i];
   if(b.t-a.t<=90*60000&&b.w-a.w>=jump&&view.wet!==null&&b.w>=view.wet-Math.max(5,capacity*.25))refills.push(b);
  }
+ const cycles=refills.map((refill,index)=>{
+  const next=refills[index+1]||null;
+  const samples=clean.filter(p=>p.t>=refill.t&&(!next||p.t<next.t));
+  const raw=points.filter(p=>p.t>=refill.t&&(!next||p.t<next.t));
+  const lastSample=samples.at(-1)||refill;
+  const before=clean[clean.indexOf(refill)-1];
+  const gapHours=raw.slice(1).reduce((max,p,i)=>Math.max(max,(p.t-raw[i].t)/HOUR),0);
+  return {at:refill.t,endedAt:next?.t??null,lastAt:lastSample.t,completed:Boolean(next),startWeight:refill.w,endWeight:lastSample.w,weightGain:before?refill.w-before.w:null,netLoss:refill.w-lastSample.w,days:((next?.t??lastSample.t)-refill.t)/DAY,readings:samples.length,gapHours:gapHours>1.5?gapHours:null,handling:raw.some(p=>p.w<view.emptyFloor||spikes.has(p))};
+ });
  const last=refills.find(p=>p.t===view.cycle.refill?.at)||null;
  const lastIndex=last?refills.indexOf(last):-1,previousRefill=lastIndex>0?refills[lastIndex-1]:null;
  let start=range==='cycle'?(previousRefill?.t??last?.t??end-7*DAY):end-Number(range)*HOUR;
@@ -68,5 +77,5 @@ export function plantTrendModel(readings,view,{range='cycle'}={}){
  for(const reference of [view.dry,view.wet])if(reference!==null&&Number.isFinite(reference))weights.push(reference);
  let lo=weights.length?Math.floor(Math.min(...weights)):0,hi=weights.length?Math.ceil(Math.max(...weights)):1;if(hi-lo<1)hi=lo+1;
  const plotEnd=forecast.at(-1)?.t??end;
- return {current,previous,temperature,forecast,spikes,emptyFloor:view.emptyFloor,lo,hi,tempLo,tempHi,start:past[0]?.t??start,end,plotEnd,refill:last,previousRefill,method,potCount:pot.length,ticks:dayBoundaries(past[0]?.t??start,plotEnd)};
+ return {current,previous,temperature,forecast,spikes,cycles,emptyFloor:view.emptyFloor,lo,hi,tempLo,tempHi,start:past[0]?.t??start,end,plotEnd,refill:last,previousRefill,method,potCount:pot.length,ticks:dayBoundaries(past[0]?.t??start,plotEnd)};
 }

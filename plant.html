@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261105-trend-1">
+  <link rel="stylesheet" href="plant.css?v=20261105-cycles-1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -123,10 +123,10 @@
           <p class="eyebrow">Sykerbos intelligence</p>
           <h2 id="plant-intelligence-title">Learning this plant.</h2>
           <p id="plant-intelligence-copy">Sykerbos compares the weight and temperature history already recorded by this VyTile.</p>
-          <div class="learning-progress"><span id="plant-learning-bar" style="width:0%"></span></div>
           <small id="plant-learning-note">Loading history…</small>
         </article>
 
+        <section class="cycle-history-grid" id="cycle-history" aria-label="Watering cycle history"></section>
         <div class="intelligence-dashboard">
           <article class="panel intelligence-visual-card">
             <div class="panel-heading">
@@ -135,19 +135,13 @@
             </div>
             <div class="measured-use-grid"><div><strong id="high-use-rate">Learning</strong><small>High use · g/day</small></div><div><strong id="high-use-days">0</strong><small>Reliable full days</small></div><div><strong id="new-cycle-readings">0</strong><small>New dry-down readings</small></div></div>
             <div class="current-slope-line"><span>Current measured rate</span><strong id="intelligence-current-rate">—</strong></div>
-            <p class="panel-note" id="use-method-note">Learning from measured days.</p>
+            <details class="cycle-method"><summary>How is daily use calculated?</summary><p class="panel-note" id="use-method-note">Learning from measured days.</p></details>
           </article>
 
-          <article class="panel confidence-card">
-            <div class="panel-heading">
-              <div><p class="eyebrow">Cycle evidence</p><h3 id="confidence-title">Early evidence</h3></div>
-              <strong class="confidence-number" id="confidence-number">—</strong>
-            </div>
-            <div class="confidence-track"><span id="confidence-track-bar" style="width:0%"></span></div>
-            <div class="confidence-steps" id="confidence-steps">
-              <span>1 cycle</span><span>3 cycles</span><span>5 cycles</span><span>8+ cycles</span>
-            </div>
-            <p id="confidence-copy">Confidence rises as repeatable irrigation and dry-down cycles agree with one another.</p>
+          <article class="panel cycle-evidence-card">
+            <p class="eyebrow">Cycle history</p><h3 id="confidence-title">Watering cycles</h3>
+            <div class="cycle-counts"><div><strong id="confidence-number">—</strong><span>Detected</span></div><div><strong id="cycles-completed">—</strong><span>Completed</span></div><div><strong id="cycles-ongoing">—</strong><span>Ongoing</span></div></div>
+            <details><summary>How are cycles counted?</summary><p>A cycle runs from one detected watering to the next. The latest remains ongoing. Counts use this plant’s loaded measurement run; handling spikes and empty-tile readings are excluded.</p></details>
           </article>
 
           <article class="panel reserve-map-card">
@@ -175,7 +169,7 @@
             <div class="evidence-list">
               <div><span>Observed signal</span><strong id="evidence-slope">Dry-down curve learning</strong></div>
               <div><span>Reserve model</span><strong id="evidence-reserve">Thresholds learning</strong></div>
-              <div><span>Repeatability</span><strong id="evidence-cycles">0 validated cycles</strong></div>
+              <div><span>Repeatability</span><strong id="evidence-cycles">Loading cycle history</strong></div>
               <div><span>Next question</span><strong id="evidence-next">Repeat the cycle and compare</strong></div>
             </div>
           </article>
@@ -204,6 +198,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261105-trend-1"></script>
+  <script type="module" src="plant.js?v=20261105-cycles-1"></script>
 </body>
 </html>
