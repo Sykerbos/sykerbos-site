@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261105-cycles-1">
+  <link rel="stylesheet" href="plant.css?v=20261109-reserve-1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -77,7 +77,7 @@
           <div class="chart-summary intelligence-summary">
             <div><small>Current use</small><strong id="plant-current-rate">—</strong><span id="plant-current-rate-note">Learning dry-down rate</span></div>
             <div><small>Recent movement</small><strong id="plant-recent-movement">—</strong><span id="plant-recent-movement-note">Last 12 hours</span></div>
-            <div><small>Projected reserve</small><strong id="plant-projected-days">—</strong><span id="plant-projected-note">Learning plant curve</span></div>
+            <div><small id="plant-projected-label">Projected reserve</small><strong id="plant-projected-days">—</strong><span id="plant-projected-note">Learning plant curve</span></div>
           </div>
           <p class="panel-note" id="plant-chart-note">Live VyTile readings.</p>
           <details class="plant-chart-about"><summary>About this graph</summary><p id="plant-chart-method"></p></details>
@@ -92,7 +92,7 @@
                 <span class="gauge-indicator" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="gauge-endpoints"><span>Dry · 0%</span><span>Full · 100%</span></div>
+            <div class="gauge-endpoints"><span>Dry reference</span><span>Full · 100%</span></div>
             <div class="range-scale"><span><small>Recent pot low</small><strong id="range-low-side">—</strong></span><span><small>Recent pot high</small><strong id="range-high-side">—</strong></span></div>
             <p id="range-explanation">Loading this pot’s saved references.</p>
           </article>
@@ -198,6 +198,6 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261105-cycles-1"></script>
+  <script type="module" src="plant.js?v=20261109-reserve-1"></script>
 </body>
 </html>

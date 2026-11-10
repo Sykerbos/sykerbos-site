@@ -1,3 +1,4 @@
+import {detectedRefills} from './drydown-evidence.js?v=1';
 import {transientWeightSpikes} from './reading-quality.js?v=1';
 const HOUR=3600000,DAY=24*HOUR;
 const val=v=>v==null||String(v).trim()===''?null:Number.isFinite(Number(v))?Number(v):null;
@@ -22,12 +23,7 @@ export function plantTrendModel(readings,view,{range='cycle'}={}){
  const points=(readings||[]).map(r=>({...r,t:Date.parse(r.measured_at||r.created_at),w:val(r.weight_g),temp:val(r.temperature_c)})).filter(p=>(p.run_id??null)===run&&Number.isFinite(p.t)&&p.t<=end&&p.w!==null).sort((a,b)=>a.t-b.t);
  const spikes=transientWeightSpikes(points,{dry:view.dry,wet:view.wet,emptyFloor:view.emptyFloor});
  const clean=points.filter(p=>p.w>=view.emptyFloor&&!spikes.has(p));
- const capacity=view.wet!==null&&view.dry!==null&&view.wet>view.dry?view.wet-view.dry:100;
- const jump=Math.max(10,capacity*.15),refills=[];
- for(let i=1;i<clean.length;i++){
-  const a=clean[i-1],b=clean[i];
-  if(b.t-a.t<=90*60000&&b.w-a.w>=jump&&view.wet!==null&&b.w>=view.wet-Math.max(5,capacity*.25))refills.push(b);
- }
+ const refills=detectedRefills(clean,view.dry,view.wet);
  const cycles=refills.map((refill,index)=>{
   const next=refills[index+1]||null;
   const samples=clean.filter(p=>p.t>=refill.t&&(!next||p.t<next.t));

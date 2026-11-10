@@ -4,12 +4,13 @@ import assert from 'node:assert/strict';
 import {collectionModel} from '../collection-model.js';
 import {plantAssetFor} from '../plant-assets.js';
 import {collectionDemo} from '../collection-demo.js';
+import {reservePercentLabel} from '../watering-model.js';
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/init\(\)\.catch\([\s\S]*$/,'');
 function run(search){
  const elements=new Map();
  const el=id=>{if(!elements.has(id))elements.set(id,{innerHTML:'',textContent:'',hidden:false,addEventListener(){},setAttribute(){}});return elements.get(id);};
  const document={querySelector:el,querySelectorAll:()=>[]};
- const context=vm.createContext({document,location:{search},URLSearchParams,Date,Map,Set,console,collectionModel,plantAssetFor,collectionDemo});
+ const context=vm.createContext({document,location:{search},URLSearchParams,Date,Map,Set,console,collectionModel,plantAssetFor,collectionDemo,reservePercentLabel});
  vm.runInContext(source+'\ncollection=demoPlants();render();',context);
  return {html:el('#plant-list').innerHTML,context,elements};
 }
@@ -23,4 +24,8 @@ assert.doesNotMatch(basic.elements.get('#plant-list').innerHTML,/<img src=x/);
 assert.match(run('?demo=collection&state=offline').html,/Offline/);
 assert.match(run('?demo=collection&state=removed').html,/Pot lifted/);
 assert.match(run('?demo=collection&state=learning').html,/Learning reserve/);
+const below=run('?demo=collection&state=below-reference').html;
+assert.match(below,/Dry reference reached/);
+assert.match(below,/g above previous low/);
+assert.doesNotMatch(below,/>0%<small>reserve/);
 console.log('Passed: both plants, reserve ordering, optional calculations, safe user text, and offline/removed/learning card rendering.');

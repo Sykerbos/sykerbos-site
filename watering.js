@@ -1,4 +1,4 @@
-import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=4';
+import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=5';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
@@ -54,8 +54,8 @@ function updatePlan(){
   $('#suggested').textContent=suggestion===null?'Not set':fmt(suggestion)+' ml';
   $('#use-suggestion').disabled=running||!(suggestion>0);
   $('#target-weight').textContent=plan.target===null?'—':fmt(plan.target)+' g';
-  $('#projected-days').textContent=plan.overWet>1e-7?'—':plan.days===null?'Learning':'~'+fmt(plan.days)+' days';
-  $('#projection-note').textContent=plan.days===null?'Reserve time appears once enough reliable daily readings and wet/dry references are available.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
+  $('#projected-days').textContent=plan.overWet>1e-7?'—':plan.referenceReached?'Check':plan.days===null?'Learning':plan.days<.1?'<0.1 days':'~'+fmt(plan.days)+' days';
+  $('#projection-note').textContent=plan.referenceReached?'Target is at or below the dry reference. Reserve time isn’t estimated.':plan.days===null?'Reserve time appears once enough reliable daily readings and wet/dry references are available.':`Estimate at ${fmt(loss)} g/day · allow a buffer for time away.`;
   const full=wet!==null&&start!==null&&start>=wet;
   $('#wet-warning').hidden=wet!==null&&!full&&plan.overWet<=1e-7;
   $('#wet-warning').textContent=wet===null?'Confirm this pot’s fully drained saturated weight before setting a watering target.':full?`At saturated weight (${fmt(wet,0)} g). No more water needed.`:`Maximum ${fmt(plan.suggested)} ml to the ${fmt(wet,0)} g saturated weight. Reduce the amount or use the suggestion.`;
