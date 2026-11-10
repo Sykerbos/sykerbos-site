@@ -7,7 +7,8 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261109-drydown">
+  <link rel="stylesheet" href="plant.css?v=20261110-activity">
+  <link rel="stylesheet" href="herbarium-physiology.css?v=1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -105,13 +106,16 @@
         </aside>
       </div>
 
-      <section class="section-block">
+      <section class="section-block activity-section">
         <div class="section-title-row">
-          <div><p class="eyebrow">Plant history</p><h2>Recent events</h2></div>
+          <div><p class="eyebrow">Plant history</p><h2>Plant activity</h2></div>
         </div>
-        <div class="event-list" id="event-list">
-          <article><span class="event-icon">…</span><div><strong>Loading recent readings</strong><small>From Supabase</small></div></article>
-        </div>
+        <ol class="event-list" id="event-list"></ol>
+        <p class="activity-empty" id="activity-empty">Watering and cycle milestones will appear here as VyTile detects them.</p>
+        <details class="activity-details" id="activity-details" hidden>
+          <summary>Latest tile readings</summary>
+          <ul id="activity-readings"></ul>
+        </details>
       </section>
     </section>
 
@@ -186,32 +190,7 @@
           <a class="button" id="herbarium-dossier-link" href="herbarium.html">Explore Herbarium →</a>
         </div>
       </div>
-      <article class="drought-card">
-        <div class="drought-card-art">
-          <p>Herbarium · Milestone</p>
-          <svg viewBox="0 0 96 112" aria-hidden="true" fill="none">
-            <path d="M48 57C26 59 19 38 23 20c17 3 27 15 25 37Zm0-7C45 26 61 13 78 9c4 21-7 38-30 41Z" fill="#a5bb7d" stroke="#dbe7b6" stroke-width="2"/>
-            <path d="M48 78V46m0 9L29 29m19 19L71 17M48 72c-1 11-18 11-20 28m20-23c2 10 19 10 19 22M48 78c-3 15 2 18 0 28M32 91l-10 4m42-4 10 4" stroke="#edcf95" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <strong>Drought Recovery</strong>
-        </div>
-        <div><p class="eyebrow">Card preview</p><h3>Back from a very dry cycle.</h3>
-          <p>Weight loss slowed to nearly flat. After watering, the usual dry-down returned and the leaves looked healthy.</p>
-        </div>
-      </article>
-      <article class="drought-card flood-card">
-        <div class="drought-card-art">
-          <p>Herbarium · Milestone</p>
-          <svg viewBox="0 0 96 112" aria-hidden="true" fill="none">
-            <path d="M48 9C37 29 20 42 20 62a28 28 0 0 0 56 0C76 42 59 29 48 9Z" fill="#5289a2" stroke="#b7dce6" stroke-width="2"/>
-            <path d="M48 78c-2-18 8-25 21-29 0 14-7 23-21 29Zm0 0c-12-1-18-7-20-18 12 0 19 6 20 18Zm0 0v19m0-19 13-19M12 99c11 0 11-5 23-5s12 5 24 5 12-5 25-5" stroke="#e1f1d7" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <strong>Flood Recovery</strong>
-        </div>
-        <div><p class="eyebrow">Card preview</p><h3>Back on track after a second soak.</h3>
-          <p>After an accidental repeat soaking, the pot drained, its usual dry-down resumed, and the leaves looked healthy.</p>
-        </div>
-      </article>
+      <section class="physiology-deck" id="plant-physiology" data-plant-physiology aria-label="Plant physiology"></section>
     </section>
   </main>
 
@@ -222,6 +201,7 @@
     <a href="app.html#settings"><span>⚙</span>Settings</a>
   </nav>
 
-  <script type="module" src="plant.js?v=20261109-drydown"></script>
+  <script type="module" src="herbarium-physiology.js?v=1"></script>
+  <script type="module" src="plant.js?v=20261110-activity"></script>
 </body>
 </html>

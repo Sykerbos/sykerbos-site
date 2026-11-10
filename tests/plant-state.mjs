@@ -4,6 +4,7 @@ import {collectionDemo} from '../collection-demo.js';
 import {collectionModel} from '../collection-model.js';
 import {plantTrendModel} from '../plant-trend-model.js';
 import {plantDrydownGauge} from '../plant-drydown-gauge.js';
+import {plantActivity} from '../plant-activity.js';
 import {reservePercentLabel,waterPlan} from '../watering-model.js';
 const now=Date.parse('2026-10-18T07:00:00Z');
 const row=(minutes,weight)=>({weight_g:weight,measured_at:new Date(now-minutes*60000).toISOString(),run_id:'one'});
@@ -47,8 +48,19 @@ const lower=Array.from({length:144},(_,i)=>({...sample.history.at(-1),
 const newLow=plantState(sample,[...sample.history,...lower],{now:Date.parse(lower.at(-1).measured_at)});
 assert.equal(plantDrydownGauge(newLow,629).newLow,true);
 assert.equal(newLow.observedLow.weight,dial.low);
-const forecast=plantTrendModel(sample.history,below).forecast;
+const trend=plantTrendModel(sample.history,below);
+const forecast=trend.forecast;
 assert.ok(forecast.at(-1).w<forecast[0].w);
+const timeline=plantActivity(below,dial,trend.cycles,sample.history);
+assert.deepEqual(timeline.map(e=>e.kind),['dry','water','cycle']);
+assert.match(timeline[0].copy,/above the observed low/);
+assert.match(timeline[1].copy,/The pot gained/);
+const gapReadings=sample.history.filter(r=>{
+  const age=demoNow-Date.parse(r.measured_at);
+  return age<48*3600000||age>52*3600000;
+});
+const withGap=plantState(sample,gapReadings,{now:demoNow});
+assert.equal(plantActivity(withGap,plantDrydownGauge(withGap,629),trend.cycles,gapReadings).filter(e=>e.kind==='signal').length,1);
 const refillAt=demoNow+1200000;
 const afterRefill=plantState(sample,[...sample.history,{...sample.history.at(-1),measured_at:new Date(refillAt).toISOString(),weight_g:629}],{now:refillAt});
 assert.equal(afterRefill.state,'refill');

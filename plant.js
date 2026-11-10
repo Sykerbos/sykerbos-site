@@ -3,6 +3,7 @@ import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=6';
 import {plantDrydownGauge} from './plant-drydown-gauge.js?v=1';
+import {plantActivity} from './plant-activity.js?v=1';
 import {plantTrendModel} from './plant-trend-model.js?v=3';
 import {plantTrendSvg} from './plant-trend-render.js?v=1';
 
@@ -65,14 +66,28 @@ function renderCycles(cycles){
   }
 }
 
-function eventList(view){
+const activityIcons={dry:'<path d="M3 5l6 6 4-4 8 9m-6 0h6v-6"/>',water:'<path d="M12 3c3 4 6 7 6 11a6 6 0 1 1-12 0c0-4 3-7 6-11Z"/>',cycle:'<path d="M4 11a8 8 0 1 1 3 7m-3-2v-5h5"/>',signal:'<path d="M2 12h5l3-6 4 12 3-6h5"/>'};
+function eventList(view,dial,cycles){
   const host=$('#event-list');host.replaceChildren();
-  const events=[];
-  if(view.cycle.refill)events.push({title:'Refill detected',copy:new Date(view.cycle.refill.at).toLocaleString()+' · inferred from the weight change'});
-  for(const r of rows.slice(-3).reverse())events.push({title:Number(r.weight_g)<view.emptyFloor?'Empty tile / handling':fmt(r.weight_g)+' g · '+fmt(r.temperature_c)+' °C',copy:new Date(time(r)).toLocaleString()});
-  for(const event of events.slice(0,4)){
-    const article=document.createElement('article'),icon=document.createElement('span'),body=document.createElement('div'),title=document.createElement('strong'),copy=document.createElement('small');
-    icon.className='event-icon';icon.textContent='·';title.textContent=event.title;copy.textContent=event.copy;body.append(title,copy);article.append(icon,body);host.append(article);
+  const events=plantActivity(view,dial,cycles,rows);
+  for(const event of events){
+    const item=document.createElement('li'),icon=document.createElement('span'),body=document.createElement('div');
+    const title=document.createElement('strong'),copy=document.createElement('span'),date=document.createElement('time');
+    item.dataset.kind=event.kind;icon.className='event-icon';icon.setAttribute('aria-hidden','true');
+    icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+activityIcons[event.kind]+'</svg>';
+    title.textContent=event.title;copy.textContent=event.copy;
+    date.dateTime=new Date(event.at).toISOString();
+    date.textContent=event.live?'Current cycle':new Date(event.at).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+    body.append(title,copy);item.append(icon,body,date);host.append(item);
+  }
+  $('#activity-empty').hidden=events.length>0;
+  const raw=$('#activity-readings');raw.replaceChildren();
+  const samples=rows.slice(-3).reverse();$('#activity-details').hidden=!samples.length;
+  for(const r of samples){
+    const item=document.createElement('li'),label=document.createElement('span'),value=document.createElement('strong');
+    const at=time(r);label.textContent=Number.isFinite(at)?new Date(at).toLocaleString():'Unknown time';
+    value.textContent=fmt(r.weight_g)+' g · '+fmt(r.temperature_c)+' °C';
+    item.append(label,value);raw.append(item);
   }
 }
 function render(){
@@ -145,7 +160,7 @@ function render(){
   $('#reserve-wet-marker').style.left='0%';$('#reserve-dry-marker').style.left='100%';
   if(view.percent!==null)$('#reserve-current-marker').style.left=place(view.latest.w)+'%';
   if(trigger!==null)$('#reserve-trigger-marker').style.left=place(trigger)+'%';
-  chart(view);eventList(view);
+  chart(view);eventList(view,dial,detected);
 }
 async function loadHistory(latest){
   const result=[];

@@ -14,7 +14,6 @@
 .axis-label{position:absolute;bottom:12px;font-size:.78rem;color:var(--muted)}.axis-label.left{left:14px}.axis-label.mid{left:48%}.axis-label.right{right:14px}
 .chart-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.chart-summary>div{padding:14px;border:1px solid var(--line);border-radius:16px}.chart-summary small,.chart-summary strong{display:block}.chart-summary small{color:var(--muted);margin-bottom:4px}
 .next-action{background:linear-gradient(145deg,#f8f7ef,#e9efe4)}.confidence-row{display:flex;justify-content:space-between;gap:16px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}.confidence-row span{color:var(--muted)}
-.event-list{display:grid;gap:10px}.event-list article{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;background:white;border:1px solid var(--line);border-radius:18px;padding:16px}.event-list small{display:block;color:var(--muted);margin-top:3px}.event-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--sage)}
 .intelligence-layout{display:grid;gap:16px}.intelligence-hero{background:linear-gradient(145deg,#f8f7ef,#e9efe4)}.insight-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}.insight-grid article>span{display:inline-flex;padding:6px 9px;border-radius:999px;background:var(--sage);font-size:.72rem;font-weight:700}.insight-grid h3{font-family:"Libre Baskerville",serif;font-size:1.45rem;margin:14px 0 8px}.insight-grid p{color:var(--muted);margin:0}
 .herbarium-preview{display:grid;grid-template-columns:.9fr 1.1fr;overflow:hidden;border-radius:28px;border:1px solid var(--line);background:white}.herbarium-image{min-height:480px}.herbarium-image img{width:100%;height:100%;object-fit:cover;object-position:50% 55%}.herbarium-copy{padding:clamp(30px,5vw,58px);align-self:center}.herbarium-copy h2{font-size:clamp(2.8rem,5vw,4.8rem);margin-bottom:4px}.botanical-name{font-family:"Libre Baskerville",serif;color:var(--muted);font-size:1.1rem}.herbarium-facts{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}.herbarium-facts span{padding:7px 10px;border-radius:999px;background:var(--sage);font-size:.8rem;font-weight:700}
 @media(max-width:850px){.plant-hero{grid-template-columns:1fr}.plant-hero-image{min-height:360px}.plant-main-grid{grid-template-columns:1fr}.herbarium-preview{grid-template-columns:1fr}.herbarium-image{min-height:360px}}
@@ -155,9 +154,24 @@
 .cycle-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.cycle-history-card{background:#fffdf8;padding:26px;border:1px solid var(--line);border-radius:23px;min-width:0}.cycle-history-status{display:inline-block;background:#eee4f0;color:#775080;border-radius:20px;padding:5px 10px;font-size:.72rem;margin-bottom:15px}.cycle-history-status.completed{background:#e7efdf;color:#39664c}.cycle-history-card h3{font-family:"Libre Baskerville",serif;font-size:1.55rem;margin:0 0 9px}.cycle-history-dates{color:var(--muted);font-size:.83rem;margin:0 0 22px}.cycle-history-duration{font-family:"Libre Baskerville",serif;font-size:2rem;display:block;margin-bottom:12px;color:var(--ink)}.cycle-history-weights{font-size:1rem;margin:0 0 5px}.cycle-history-loss{font-size:.83rem;color:var(--muted);margin:0}.cycle-history-card details,.cycle-evidence-card details,.cycle-method{border-top:1px solid var(--line);padding-top:14px;margin-top:20px;font-size:.76rem;color:var(--muted)}.cycle-history-card summary,.cycle-evidence-card summary,.cycle-method summary{cursor:pointer}.cycle-history-card details p,.cycle-evidence-card details p{margin:10px 0 0;line-height:1.65}.cycle-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:26px 0 6px}.cycle-counts>div{display:grid;gap:8px}.cycle-counts strong{font-family:"Libre Baskerville",serif;font-size:2rem;color:var(--ink)}.cycle-counts span{font-size:.73rem;color:var(--muted)}.cycle-evidence-card h3{font-family:"Libre Baskerville",serif;font-size:1.55rem;margin:0}.intelligence-hero>small{display:block;color:var(--muted);font-size:.76rem;margin-top:18px}
 @media(max-width:620px){.cycle-history-grid{grid-template-columns:1fr}.cycle-history-card{padding:22px}}
 
-.drought-card{display:flex;align-items:center;flex-wrap:wrap;gap:24px;margin-top:22px;padding:clamp(16px,4vw,30px);border:1px solid var(--line);border-radius:24px;background:#faf6ee}
-.drought-card-art{display:grid;justify-items:center;gap:8px;flex:0 0 160px;box-sizing:border-box;padding:13px 8px;border:3px double #d8b678;border-radius:14px;background:radial-gradient(ellipse at top,#5c6750,#283b36 62%,#23312b);color:#fff5df;box-shadow:0 8px 18px #26302422;text-align:center}
-.drought-card-art p{margin:0;text-transform:uppercase;letter-spacing:.12em;font-size:.58rem;color:#f0d8a4}
-.drought-card-art svg{width:82px;height:90px}.drought-card-art strong{font-family:"Libre Baskerville",serif;font-size:1rem}
-.drought-card h3{font-family:"Libre Baskerville",serif;font-size:1.3rem;margin:4px 0 8px}
-.flood-card{background:#eef5f6}.flood-card .drought-card-art{border-color:#9ecad5;background:radial-gradient(ellipse at top,#37687d,#1c4355 62%,#193843);color:#e8f6f7}.flood-card .drought-card-art p{color:#b7dce6}
+
+.activity-section{padding:clamp(18px,3.4vw,30px);background:#fcfbf7;border:1px solid var(--line);border-radius:24px}
+.activity-section .section-title-row{margin:0 0 15px}
+.event-list{list-style:none;margin:0;padding:0}
+.event-list li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:12px;position:relative;padding:13px 0}
+.event-list li:not(:last-child):after{content:"";position:absolute;top:49px;bottom:-12px;left:17px;width:1px;background:#d6e0d6}
+.event-list li strong,.event-list li div>span{display:block}
+.event-list li strong{color:var(--ink);font-size:.96rem}
+.event-list li div>span{color:var(--muted);font-size:.85rem;margin-top:3px;line-height:1.45}
+.event-list time{margin-top:1px;font-size:.73rem;white-space:nowrap;color:var(--muted)}
+.event-icon{display:grid;place-items:center;width:35px;height:35px;border-radius:12px;color:#345a47;background:#e5eee4}
+.event-icon svg{width:19px;height:19px}
+[data-kind="dry"]>.event-icon{color:#8b4c2c;background:#f5e7d9}
+[data-kind="water"]>.event-icon{color:#2a5778;background:#e2edf3}
+[data-kind="signal"]>.event-icon{color:#5b4b73;background:#ebe6f0}
+.activity-details{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;color:var(--muted);font-size:.82rem}
+.activity-details summary{cursor:pointer;font-weight:650}
+.activity-details ul{list-style:none;margin:8px 0 0;padding:0}
+.activity-details li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 14px;padding:6px 0}
+.activity-empty{color:var(--muted);font-size:.9rem;margin:0}
+@media(max-width:480px){.event-list li{grid-template-columns:auto minmax(0,1fr);gap:3px 10px}.event-list time{grid-column:2}}
