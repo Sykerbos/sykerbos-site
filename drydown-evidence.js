@@ -1,4 +1,19 @@
 const HOUR=3600000;
+// A setup weight stops being useful after a sustained, uninterrupted decline
+// carries the pot below it. A pot lift or isolated low reading cannot retire it.
+export function crossedSetupWeight(points,{dry,emptyFloor,spikes}){
+ let start=0,below=0;
+ for(let i=0;i<points.length;i++){
+  const p=points[i],previous=points[i-1];
+  if(p.w<emptyFloor||spikes.has(p)){start=i+1;below=0;continue;}
+  if(previous&&(p.t-previous.t>90*60000||Math.abs(p.w-previous.w)>5)){start=i;below=0;}
+  if(p.t===previous?.t)continue;
+  while(start<i&&p.t-points[start+1].t>=6*HOUR)start++;
+  below=p.w<=dry-.5?below+1:0;
+  if(below>=3&&i-start>=4&&p.t-points[start].t>=6*HOUR&&points[start].w-p.w>=1)return true;
+ }
+ return false;
+}
 export function detectedRefills(points,dry,wet){
  const capacity=wet!==null&&dry!==null&&wet>dry?wet-dry:100;
  const jump=Math.max(10,capacity*.15),refills=[];

@@ -25,7 +25,7 @@ assert.match(run('?demo=collection&state=offline').html,/Offline/);
 assert.match(run('?demo=collection&state=removed').html,/Pot lifted/);
 assert.match(run('?demo=collection&state=learning').html,/Learning reserve/);
 const below=run('?demo=collection&state=below-reference').html;
-assert.match(below,/Dry reference reached/);
+assert.match(below,/Learning reserve/);
 assert.match(below,/g above previous low/);
 assert.doesNotMatch(below,/>0%<small>reserve/);
 console.log('Passed: both plants, reserve ordering, optional calculations, safe user text, and offline/removed/learning card rendering.');

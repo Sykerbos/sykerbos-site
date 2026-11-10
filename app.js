@@ -1,7 +1,7 @@
 import {reservePercentLabel} from './watering-model.js?v=5';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
-import {collectionModel} from './collection-model.js?v=2';
+import {collectionModel} from './collection-model.js?v=3';
 import {collectionDemo} from './collection-demo.js?v=2';
 const $=s=>document.querySelector(s);
 const demo=['collection','watering'].includes(new URLSearchParams(location.search).get('demo'));
@@ -25,12 +25,12 @@ function card(p){
  const m=p.model,v=m.view,asset=plantAssetFor(p),plantLink=demo?'plant.html?demo=watering&collection='+encodeURIComponent(p.id):'plant.html?plant='+encodeURIComponent(p.id),waterLink=demo?'watering.html?demo=1':'watering.html?plant='+encodeURIComponent(p.id);
  const difference=v.abovePreviousLow;
  const comparison=difference===null?'Check your plant':Math.abs(difference)<.05?'At previous low':`${number(Math.abs(difference))} g ${difference>0?'above':'below'} previous low`;
- const estimate=v.referenceReached?comparison:m.days===null?(m.percent===null?'Following your plant':'Water reserve'):v.state==='low'?'Time for a check':`About ${m.days} day${m.days===1?'':'s'} in reserve`;
+ const estimate=v.previousLow||v.referenceReached?comparison:m.days===null?(m.percent===null?'Following your plant':'Water reserve'):v.state==='low'?'Time for a check':`About ${m.days} day${m.days===1?'':'s'} in reserve`;
  const state=m.priority===0?'attention':!v.fresh||v.maintenance?'offline':'growing';
  const last=v.cycle.refill?new Date(v.cycle.refill.at).toLocaleDateString(undefined,{day:'numeric',month:'short'}):null;
  const lastCopy=last?`Watered ${last}`:'Following the current dry-down';
  const refillText=m.refill===null?'—':`${Math.round(m.refill)} mL`;
- const measurements=`<dl><div><dt>Current weight</dt><dd>${number(v.latest?.w)} g</dd></div><div><dt>Temperature</dt><dd>${number(v.latest?.temperature_c)} °C</dd></div><div><dt>Current daily loss</dt><dd>${number(v.rate)} g/day</dd></div><div><dt>Planning daily loss</dt><dd>${number(v.usage.rate)} g/day</dd></div><div><dt>Refill to saved full weight</dt><dd>${refillText}</dd></div><div><dt>Full weight</dt><dd>${number(v.wet,0)} g</dd></div><div><dt>Dry weight${p.learned_dry_g==null?' · setup value':''}</dt><dd>${number(v.dry,0)} g</dd></div><div><dt>Reliable days</dt><dd>${v.usage.qualifyingDays}</dd></div></dl>`;
+ const measurements=`<dl><div><dt>Current weight</dt><dd>${number(v.latest?.w)} g</dd></div><div><dt>Temperature</dt><dd>${number(v.latest?.temperature_c)} °C</dd></div><div><dt>Current daily loss</dt><dd>${number(v.rate)} g/day</dd></div><div><dt>Planning daily loss</dt><dd>${number(v.usage.rate)} g/day</dd></div><div><dt>Refill to saved full weight</dt><dd>${refillText}</dd></div><div><dt>Full weight</dt><dd>${number(v.wet,0)} g</dd></div><div><dt>${v.dry!==null&&p.learned_dry_g==null?'Setup dry weight':'Dry weight'}</dt><dd>${v.dry===null?'Learning':number(v.dry,0)+' g'}</dd></div><div><dt>Reliable days</dt><dd>${v.usage.qualifyingDays}</dd></div></dl>`;
  return `<article class="collection-plant ${state}"><a class="collection-photo" href="${plantLink}" aria-label="Open ${safe(title(p))}">${asset?`<img src="${asset.image}" alt="" loading="lazy">`:`<span class="collection-monogram">${safe(title(p).slice(0,1))}</span>`}<span class="collection-status">${safe(m.label)}</span></a><div class="collection-copy"><div class="collection-heading"><div><p class="collection-species">${safe(p.common_name||p.device?.device_code||'Your plant')}</p><h2><a href="${plantLink}">${safe(title(p))}</a></h2><p class="collection-estimate">${estimate}</p></div><div class="collection-reserve ${m.percent===null?'unknown':''}" style="--reserve:${m.percent??0}%" role="img" aria-label="${v.referenceReached?'Dry reference reached; water reserve unavailable':m.percent===null?'Water reserve unavailable':`Estimated water reserve ${reservePercentLabel(v.percent)}`}"><span>${v.referenceReached?'Check':safe(reservePercentLabel(v.percent))}<small>reserve</small></span></div></div><div class="collection-trend">${sparkline(m)}</div><div class="collection-trend-meta"><span>${lastCopy}</span><span>${safe(age(v.latest?.t))}</span></div><div class="collection-actions"><a class="button" href="${waterLink}">${demo?'Try watering':!v.fresh||v.maintenance?'Open VyTile':'Water plant'} <span aria-hidden="true">↗</span></a><a class="text-link" href="${plantLink}">Plant story →</a></div><details class="collection-measurements" data-plant="${safe(p.id)}"><summary>Measurements & calculations</summary>${measurements}<p>Reserve compares the current weight with this pot’s saved full and dry weights. Days use its higher-use measured days; loss includes evaporation.</p></details></div></article>`;
 }
 function render(){
@@ -46,9 +46,9 @@ function render(){
 async function loadHistory(device,latest){
  const key=JSON.stringify([stamp(latest),latest.weight_g,latest.run_id]);
  const cached=historyCache.get(device.id);if(cached?.key===key)return cached.rows;
- const rows=[],cutoff=new Date(Date.now()-30*86400000).toISOString(),anchor=new Date(Date.now()).toISOString();
- for(let offset=0;offset<5000;offset+=1000){
-  let query=supabase.from('readings').select('id,weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).gte('created_at',cutoff).lte('created_at',anchor).order('created_at',{ascending:false}).order('id',{ascending:false});
+ const rows=[],anchor=new Date(Date.now()).toISOString();
+ for(let offset=0;offset<10000;offset+=1000){
+  let query=supabase.from('readings').select('id,weight_g,temperature_c,measured_at,created_at,run_id').eq('device_id',device.id).lte('created_at',anchor).order('created_at',{ascending:false}).order('id',{ascending:false});
   query=latest.run_id?query.eq('run_id',latest.run_id):query.is('run_id',null);
   const {data,error}=await query.range(offset,offset+999);if(error)throw error;rows.push(...(data||[]));if(!data||data.length<1000)break;
  }

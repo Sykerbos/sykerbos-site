@@ -1,4 +1,4 @@
-import {plantState} from './plant-state.js?v=4';
+import {plantState} from './plant-state.js?v=5';
 import {plantChartModel} from './plant-chart-model.js?v=2';
 export function collectionModel(plant,readings,{now=Date.now(),device=null}={}){
   const view=plantState(plant,readings,{now,maintenance:plant.status==='offline'||device?.status==='maintenance'});

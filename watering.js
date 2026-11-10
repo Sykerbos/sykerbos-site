@@ -1,4 +1,4 @@
-import {waterPlan,observedHighUse,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=5';
+import {waterPlan,numberOrNull,localReadingUrl,directSample} from './watering-model.js?v=5';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),demo=params.get('demo')==='1';
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
@@ -241,6 +241,9 @@ setInterval(()=>{
   }
 },500);
 window.addEventListener('pagehide',()=>{clearTimeout(pollTimer);controller?.abort();});
+function updateReferenceNote(provisional){
+  $('#reference-note').textContent=wet===null?'Save the drained full weight to set a watering limit.':`Full weight ${fmt(wet,0)} g${dry===null?'':` · ${provisional?'Setup dry weight':'Dry weight'} ${fmt(dry,0)} g`}.`;
+}
 function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null,savedConnection=null,usage=null}){
   stableSamples=[];
   current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress:'+code:null;
@@ -253,7 +256,7 @@ function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=fa
   let saved=null;try{saved=key?numberOrNull(localStorage.getItem(key)):null;}catch{}
   amount.value=plan.suggested>0?String(Math.floor((Math.min(saved>0?saved:plan.suggested,plan.suggested)+1e-7)*10)/10):'';
   rate.value=Number.isFinite(dailyLoss)&&dailyLoss>0?dailyLoss.toFixed(1):'';
-  $('#reference-note').textContent=dry!==null&&wet!==null?`Saturated weight ${fmt(wet,0)} g · ${experimental?'experimental':'saved'} dry reference ${fmt(dry,0)} g.`:'This pot needs wet and dry references before reserve time can be estimated.';
+  updateReferenceNote(experimental);
   rate.readOnly=true;
   const usageText=demo?'Example use · 18.6 g/day':usage?.rate?`${usage.qualifyingDays<7?'Early estimate · ':'Measured high use · '}${fmt(usage.rate)} g/day · ${usage.usedDays} of ${usage.qualifyingDays} days`:'Learning daily use';
   $('#reserve-use').textContent=usageText;
@@ -267,7 +270,7 @@ async function init(){
     setContext({nickname:'Kitchen Basil · watering example',code:'DemoTile',mass:615,low:610,high:params.get('first')==='1'?null:735,dailyLoss:18.6,experimental:true});
     tareSupported=true;receive(params.get('zero')==='1'?-5:615);return;
   }
-  const {supabase}=await import('./supabase-client.js');
+  const [{supabase},{plantState}]=await Promise.all([import('./supabase-client.js'),import('./plant-state.js?v=5')]);
   const {data:{session}}=await supabase.auth.getSession();
   if(!session){location.replace('account.html');return;}
   const id=params.get('plant');
@@ -284,21 +287,24 @@ async function init(){
   const savedConnection=plant.live_connection?.device_id===device.id?plant.live_connection.url:null;
   const valid=v=>numberOrNull(v)!==null;
   const learnedDry=valid(plant.learned_dry_g),confirmedWet=valid(plant.learned_saturated_g)&&Number(plant.learned_saturated_g)>0;
-  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learnedDry?plant.learned_dry_g:plant.provisional_dry_g,high:confirmedWet?plant.learned_saturated_g:null,dailyLoss:null,usage:null,stamp:reading?.measured_at||reading?.created_at,experimental:!learnedDry,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
+  setContext({nickname:plant.nickname||plant.common_name||'Your plant',code:device.device_code,mass:reading?.weight_g,low:learnedDry?plant.learned_dry_g:null,high:confirmedWet?plant.learned_saturated_g:null,dailyLoss:null,usage:null,stamp:reading?.measured_at||reading?.created_at,key:'sykerbosWaterTarget:'+session.user.id+':'+id,savedConnection});
   if($('#device-url').value){
     try{beginConnection($('#device-url').value.trim());}catch(error){$('#connection-help').textContent=error.message;}
   }else{message('Setup needed');$('#pour-message').textContent='Connect your tile once to enable live watering.';}
   try{
-    const rows=[],cutoff=new Date(Date.now()-30*86400000).toISOString();
-    for(let offset=0;offset<5000;offset+=1000){
+    const rows=[],anchor=new Date().toISOString();
+    for(let offset=0;offset<10000;offset+=1000){
       let query=supabase.from('readings').select('id,weight_g,measured_at,created_at,run_id').eq('device_id',device.id);
       query=reading?.run_id==null?query.is('run_id',null):query.eq('run_id',reading.run_id);
-      const {data,error}=await query.gte('created_at',cutoff).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+999);
+      const {data,error}=await query.lte('created_at',anchor).order('created_at',{ascending:false}).order('id',{ascending:false}).range(offset,offset+999);
       if(error)throw error;
       rows.push(...(data||[]));
       if(!data||data.length<1000)break;
     }
-    const usage=observedHighUse(rows,{dry});
+    const view=plantState(plant,rows);
+    dry=view.dry;
+    const usage=view.usage;
+    updateReferenceNote(!learnedDry);
     rate.value=usage.rate?usage.rate.toFixed(1):'';
     $('#reserve-use').textContent=usage.rate?`${usage.qualifyingDays<7?'Early estimate · ':'Measured high use · '}${fmt(usage.rate)} g/day · ${usage.usedDays} of ${usage.qualifyingDays} days`:'Learning daily use';
     $('#rate-note').textContent=usage.rate?`Average of the higher-use half of ${usage.qualifyingDays} reliable, completed days in this measurement run (last 30 days). Watering, abrupt shifts and gaps are excluded. ${usage.qualifyingDays<7?'Early estimate; more cycles will improve it. ':''}Weight loss includes evaporation.`:`${usage.qualifyingDays} reliable days so far. At least 3 are needed. No fixed species assumption is used.`;
