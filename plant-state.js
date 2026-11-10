@@ -24,11 +24,11 @@ export function plantState(plant,readings,{now=Date.now(),maintenance=false}={})
   const known=dry!==null&&wet!==null&&wet>dry;
   const available=fresh&&!maintenance&&!cycle.potRemoved;
   const {reserve,referenceReached}=referenceReserve(available?latest.w:null,dry,wet);
-  let previousLow=null;
-  if(available&&(referenceReached||setupRetired)&&cycle.refill)previousLow=previousDrydownLow(points,{dry,wet,emptyFloor,refillAt:cycle.refill.at,spikes});
+  const observedLow=cycle.refill?previousDrydownLow(points,{dry,wet,emptyFloor,refillAt:cycle.refill.at,spikes}):null;
+  const previousLow=available&&(referenceReached||setupRetired)?observedLow:null;
   const abovePreviousLow=previousLow?latest.w-previousLow.weight:null;
   const percent=reserve===null?null:Math.max(0,Math.min(100,reserve/(wet-dry)*100));
   const usage=observedHighUse(rows,{now,dry});
   const state=maintenance?'maintenance':cycle.potRemoved?'removed':!fresh?'stale':referenceReached?'reference':percent!==null&&percent<=20?'low':cycle.recent?'refill':'drying';
-  return {state,dry,wet,known,referenceReached,setupRetired,previousLow,abovePreviousLow,cycle,latest,fresh,maintenance,emptyFloor,potRows,low:recent.length?Math.min(...recent):null,high:recent.length?Math.max(...recent):null,reserve,percent,angle:percent===null?null:225+percent*2.7,usage,days:reserve!==null&&usage.rate>0?reserve/usage.rate:null,rate:fresh&&!maintenance&&!cycle.potRemoved?(cycle.twelve.rate??cycle.six.rate):null};
+  return {state,dry,wet,known,referenceReached,setupRetired,observedLow,previousLow,abovePreviousLow,cycle,latest,fresh,maintenance,emptyFloor,potRows,low:recent.length?Math.min(...recent):null,high:recent.length?Math.max(...recent):null,reserve,percent,angle:percent===null?null:225+percent*2.7,usage,days:reserve!==null&&usage.rate>0?reserve/usage.rate:null,rate:fresh&&!maintenance&&!cycle.potRemoved?(cycle.twelve.rate??cycle.six.rate):null};
 }

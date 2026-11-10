@@ -1,8 +1,8 @@
-import {reservePercentLabel} from './watering-model.js?v=5';
 import {collectionDemo} from './collection-demo.js?v=2';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
-import {plantState} from './plant-state.js?v=5';
+import {plantState} from './plant-state.js?v=6';
+import {plantDrydownGauge} from './plant-drydown-gauge.js?v=1';
 import {plantTrendModel} from './plant-trend-model.js?v=3';
 import {plantTrendSvg} from './plant-trend-render.js?v=1';
 
@@ -87,14 +87,15 @@ function render(){
   const summaries={maintenance:'This tile is in maintenance. Historical readings remain available.',removed:'The pot appears removed. Reserve estimates are paused.',stale:'Waiting for a fresh tile reading.',reference:'Dry reference reached. Check your plant.',low:'Reserve is low against this pot’s current references. Check the plant before watering.',refill:'Recently watered. Watching the pot settle and begin its next dry-down.',drying:'Following this pot’s measured weight and dry-down.'};
   $('#plant-summary').textContent=summaries[view.state];
 
-  const gauge=$('#radial-gauge');
-  gauge.dataset.known=String(view.percent!==null);
-  gauge.style.setProperty('--angle',(view.angle??225)+'deg');
-  gauge.setAttribute('role','img');gauge.setAttribute('aria-label',view.referenceReached?'Dry reference reached; water reserve unavailable':view.percent===null?'Water reserve unavailable':`Estimated water reserve ${reservePercentLabel(view.percent)}`);
-  $('#range-percent').textContent=cycle.potRemoved?'Pot off':view.referenceReached?'Check':view.percent===null?'Learning':reservePercentLabel(view.percent);
-  $('#range-percent').classList.toggle('learning-reserve',view.percent===null);
-  $('#range-low-side').textContent=fmt(view.low)+' g';$('#range-high-side').textContent=fmt(view.high)+' g';
-  $('#gauge-endpoints').style.display=view.known?'':'none';
+  const gauge=$('#radial-gauge'),dial=plantDrydownGauge(view,plant.learned_saturated_g);
+  gauge.dataset.known=String(dial.angle!==null);
+  gauge.style.setProperty('--angle',(dial.angle??225)+'deg');
+  gauge.setAttribute('role','img');gauge.setAttribute('aria-label',dial.label+' · '+dial.caption);
+  $('#range-percent').textContent=dial.label;
+  $('#range-caption').textContent=dial.caption;
+  $('#range-percent').classList.toggle('learning-reserve',!dial.label.endsWith('%'));
+  $('#range-low-side').textContent=dial.low===null?'—':fmt(dial.low)+' g';
+  $('#range-high-side').textContent=dial.full===null?'—':fmt(dial.full)+' g';
 
   $('#plant-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';
   $('#plant-current-rate-note').textContent=view.rate!==null?'Measured since the latest watering / handling change':cycle.recent?'Rebuilding after watering':'Waiting for an uninterrupted dry-down';
@@ -109,6 +110,10 @@ function render(){
   $('#plant-projected-note').textContent=view.previousLow||view.referenceReached?comparison:view.days===null?'Waiting for reliable daily use and references':`${fmt(view.reserve)} g reserve · ${fmt(view.usage.rate)} g/day${view.usage.qualifyingDays<7?' · early estimate':''}`;
   $('#plant-action-title').textContent={maintenance:'Tile in maintenance.',removed:'Return the pot.',stale:'Waiting for a reading.',reference:'Check your plant.',low:'Check your plant.',refill:'Recently watered.',drying:'Follow the dry-down.'}[view.state];
   $('#plant-action-copy').textContent={maintenance:'Historical readings remain available while the tile is in maintenance.',removed:'Return the pot to resume water reserve and dry-down readings.',stale:'Reconnect the tile before relying on its current reserve estimate.',reference:view.rate>0?`Still losing ${fmt(view.rate)} g/day. Check the pot before watering.`:'Check the pot before watering.',low:'Reserve is low against the current references. Check the plant before watering, even if a recent refill was detected.',refill:'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.',drying:'Use the measured trend alongside your plant’s condition. Reserve days are estimates.'}[view.state];
+  if(dial.late){
+    $('#plant-action-title').textContent=dial.newLow?'New observed low.':'Late dry-down.';
+    $('#plant-action-copy').textContent=dial.newLow?'Check the leaves and note how the plant looks at this weight.':`${dial.slowed?'Weight loss has slowed to':'Still losing'} ${fmt(view.rate)} g/day. Check the leaves before deciding when to water.`;
+  }
 
   const detected=plantTrendModel(rows,view).cycles;
   const completed=detected.filter(c=>c.completed).length,ongoing=detected.length-completed;
