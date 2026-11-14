@@ -4,6 +4,7 @@ let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,las
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
 let stableSamples=[],savingFullWeight=false;
 let finished=false,finishedGain=null;
+let persistLiveWeight=null,handoffContext=null,liveTemperature=null;
 let zeroing=false,tareSupported=false,tareRequestId=null,tareDeadline=0,zeroResult='';
 const amount=$('#target-amount'),rate=$('#daily-rate');
 const fmt=(v,d=1)=>v===null||!Number.isFinite(v)?'—':v.toFixed(d);
@@ -15,10 +16,15 @@ function updateSessionControls(){
   $('#end-watering').disabled=false;
   $('#done-watering').hidden=!finished;
   if(finished){
+    $('#wet-warning').hidden=true;
     $('#pour-message').textContent='Watering finished. Let excess water drain. You can return to your plant.';
     $('#added-weight').textContent=finishedGain===null?'—':fmt(finishedGain)+' g';
     $('#remaining-weight').textContent='—';
   }
+}
+function retainLiveWeight(){
+  if(demo||!persistLiveWeight||!handoffContext||!fresh()||zeroing||lastWeight===null||lastWeight<Math.max(50,dry===null?0:dry*.5))return;
+  persistLiveWeight(handoffContext,{weight:lastWeight,measuredAt:lastSampleAt,temperature:liveTemperature},{now:Date.now()});
 }
 function stableFullWeight(){
   if(!fresh()||stableSamples.length<8)return null;
@@ -107,6 +113,7 @@ function receive(weight,sampleAge=0){
     void rememberVerifiedConnection();
   }
   updatePlan();
+  if(finished)retainLiveWeight();
 }
 function disconnect(text='Not connected to VyTile'){
   stableSamples=[];
@@ -135,6 +142,7 @@ async function poll(){
       zeroResult=payload.tare_status==='done'?'Zero saved on the tile. Replace your pot.':'Zero was not saved ('+String(payload.tare_status||'unknown')+'). Keep the empty tile still and retry.';
       tareRequestId=null;
     }
+    liveTemperature=numberOrNull(payload.temperature_c);
     lastSequence=sample.sequence;receive(sample.weight,sampleAge);$('#disconnect').hidden=false;
   }catch(error){
     if(endpoint!==active||generation!==connectionGeneration)return;
@@ -212,6 +220,7 @@ $('#end-watering').addEventListener('click',()=>{
   if(finished)return;
   finishedGain=running&&baseline!==null&&lastWeight!==null?Math.max(0,lastWeight-baseline):null;
   finished=true;
+  retainLiveWeight();
   running=false;amount.disabled=false;rate.disabled=false;
   $('#pour-message').textContent='Session ended. Let it drain.';
   if(wet===null){stableSamples=[];$('#drained-confirm').checked=false;}
@@ -285,7 +294,8 @@ async function init(){
     setContext({nickname:'Kitchen Basil · watering example',code:'DemoTile',mass:615,low:610,high:params.get('first')==='1'?null:735,dailyLoss:18.6,experimental:true});
     tareSupported=true;receive(params.get('zero')==='1'?-5:615);return;
   }
-  const [{supabase},{plantState}]=await Promise.all([import('./supabase-client.js'),import('./plant-state.js?v=5')]);
+  const [{supabase},{plantState},{saveWateringWeight}]=await Promise.all([import('./supabase-client.js'),import('./plant-state.js?v=5'),import('./watering-handoff.js?v=1')]);
+  persistLiveWeight=saveWateringWeight;
   const {data:{session}}=await supabase.auth.getSession();
   if(!session){location.replace('account.html');return;}
   const id=params.get('plant');
@@ -298,6 +308,7 @@ async function init(){
   const {data:latest,error:readingError}=await supabase.from('readings').select('weight_g,measured_at,created_at,run_id').eq('device_id',device.id).order('measured_at',{ascending:false,nullsFirst:false}).order('created_at',{ascending:false}).limit(1);
   if(readingError)throw Error('The planning reference could not be loaded.');
   const reading=latest?.[0];
+  handoffContext={userId:session.user.id,plantId:id,deviceId:device.id,deviceCode:device.device_code,runId:reading?.run_id??null};
   connectionStore={client:supabase,plantId:id,userId:session.user.id,deviceId:device.id};
   const savedConnection=plant.live_connection?.device_id===device.id?plant.live_connection.url:null;
   const valid=v=>numberOrNull(v)!==null;

@@ -4,6 +4,7 @@ import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=6';
 import {plantDrydownGauge} from './plant-drydown-gauge.js?v=1';
 import {plantActivity} from './plant-activity.js?v=1';
+import {wateringDisplayRows} from './watering-handoff.js?v=1';
 import {plantTrendModel} from './plant-trend-model.js?v=3';
 import {plantTrendSvg} from './plant-trend-render.js?v=1';
 
@@ -33,8 +34,8 @@ document.querySelectorAll('.range-pills button').forEach(button=>button.addEvent
 }));
 const chartLayers={previous:true,temperature:true,forecast:true};
 document.querySelectorAll('[data-chart-layer]').forEach(button=>button.addEventListener('click',()=>{const key=button.dataset.chartLayer;chartLayers[key]=!chartLayers[key];button.setAttribute('aria-pressed',String(chartLayers[key]));render();}));
-function chart(view){
-  const model=plantTrendModel(rows,view,{range:chartRange});
+function chart(view,displayRows=rows){
+  const model=plantTrendModel(displayRows,view,{range:chartRange});
   const host=$('#plant-chart');
   host.classList.add('plant-context-chart');
   host.style.height=chartLayers.temperature&&model.temperature.length?'398px':'302px';
@@ -93,14 +94,17 @@ function eventList(view,dial,cycles){
 function render(){
   if(!plant)return;
   const maintenance=plant.status==='offline'||device?.status==='maintenance';
-  const view=plantState(plant,rows,{maintenance}),cycle=view.cycle;
+  const displayRows=demo?rows:wateringDisplayRows({userId:plant.user_id,plantId:plant.id,deviceId:device.id,deviceCode:device.device_code},rows);
+  const view=plantState(plant,displayRows,{maintenance}),cycle=view.cycle;
   $('#plant-status').textContent=maintenance?'Maintenance':view.fresh?'Connected':'Last seen '+age(view.latest?.t);
   $('#plant-status').className='status '+(maintenance?'offline':view.fresh?'good':'learning');
+  if(!maintenance&&view.latest?.source==='live-watering')$('#plant-status').textContent='Watered · waiting to sync';
   $('#plant-weight').textContent=view.latest?fmt(view.latest.w)+' g':'—';
   $('#plant-temperature').textContent=view.latest?fmt(view.latest.temperature_c)+' °C':'—';
   $('#plant-reading-count').textContent=count.toLocaleString();
   const summaries={maintenance:'This tile is in maintenance. Historical readings remain available.',removed:'The pot appears removed. Reserve estimates are paused.',stale:'Waiting for a fresh tile reading.',reference:'Dry reference reached. Check your plant.',low:'Reserve is low against this pot’s current references. Check the plant before watering.',refill:'Recently watered. Watching the pot settle and begin its next dry-down.',drying:'Following this pot’s measured weight and dry-down.'};
   $('#plant-summary').textContent=summaries[view.state];
+  if(!maintenance&&view.latest?.source==='live-watering')$('#plant-summary').textContent='Latest watering weight · waiting for the next stored reading.';
 
   const gauge=$('#radial-gauge'),dial=plantDrydownGauge(view,plant.learned_saturated_g);
   gauge.dataset.known=String(dial.angle!==null);
@@ -130,7 +134,7 @@ function render(){
     $('#plant-action-copy').textContent=dial.newLow?'Check the leaves and note how the plant looks at this weight.':`${dial.slowed?'Weight loss has slowed to':'Still losing'} ${fmt(view.rate)} g/day. Check the leaves before deciding when to water.`;
   }
 
-  const detected=plantTrendModel(rows,view).cycles;
+  const detected=plantTrendModel(displayRows,view).cycles;
   const completed=detected.filter(c=>c.completed).length,ongoing=detected.length-completed;
   $('#plant-intelligence-title').textContent=name(plant)+'’s cycles.';
   $('#plant-intelligence-copy').textContent=detected.length?`${detected.length} watering${detected.length===1?'':'s'} · ${completed} completed · ${ongoing} ongoing`:'Your first detected watering will start the cycle history.';
@@ -160,7 +164,7 @@ function render(){
   $('#reserve-wet-marker').style.left='0%';$('#reserve-dry-marker').style.left='100%';
   if(view.percent!==null)$('#reserve-current-marker').style.left=place(view.latest.w)+'%';
   if(trigger!==null)$('#reserve-trigger-marker').style.left=place(trigger)+'%';
-  chart(view);eventList(view,dial,detected);
+  chart(view,displayRows);eventList(view,dial,detected);
 }
 async function loadHistory(latest){
   const result=[];
@@ -221,5 +225,7 @@ async function init(){
   $('#water-vytile-button').href=demo?'watering.html?demo=1':'watering.html?plant='+encodeURIComponent(plant.id);
   if(demo){render();return;}
   await refresh();const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
+  window.addEventListener('storage',e=>{if(e.key?.startsWith('sykerbos:watering-weight:'))render();});
+  window.addEventListener('pageshow',()=>{render();void refresh();});
 }
 init().catch(error=>{$('#plant-summary').textContent=error.message||'This plant could not be loaded.';console.error(error);});

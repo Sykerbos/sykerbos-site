@@ -1,4 +1,5 @@
 import {reservePercentLabel} from './watering-model.js?v=5';
+import {wateringDisplayRows} from './watering-handoff.js?v=1';
 import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {collectionModel} from './collection-model.js?v=3';
@@ -35,7 +36,12 @@ function card(p){
 }
 function render(){
  const opened=new Set([...document.querySelectorAll('.collection-measurements[open]')].map(el=>el.dataset.plant));
- const plants=collection.map(p=>({...p,model:collectionModel(p,p.history,{device:p.device})})).sort((a,b)=>a.model.priority-b.model.priority||(a.model.percent??101)-(b.model.percent??101)||(a.display_order??0)-(b.display_order??0));
+ const plants=collection.map(p=>{
+   const history=demo?p.history:wateringDisplayRows({userId:user.id,plantId:p.id,deviceId:p.device?.id,deviceCode:p.device?.device_code},p.history);
+   const model=collectionModel(p,history,{device:p.device});
+   if(model.view.latest?.source==='live-watering')model.label='Watered · waiting to sync';
+   return {...p,model};
+ }).sort((a,b)=>a.model.priority-b.model.priority||(a.model.percent??101)-(b.model.percent??101)||(a.display_order??0)-(b.display_order??0));
  $('#plant-list').innerHTML=plants.length?plants.map(card).join(''):'<div class="collection-empty"><p class="eyebrow">Your first plant</p><h2>Start growing your collection.</h2><p>Connect a VyTile and add the plant it will follow.</p><a class="button" href="start.html?new=1">Set up a VyTile →</a></div>';
  document.querySelectorAll('.collection-measurements').forEach(el=>{if(opened.has(el.dataset.plant))el.open=true;});
  const online=plants.filter(p=>p.model.view.fresh&&!p.model.view.maintenance).length;
@@ -73,6 +79,8 @@ async function init(){
  const {data:{session},error}=await supabase.auth.getSession();if(error)throw error;if(!session){location.replace('account.html');return;}user=session.user;
  $('#profile-button').textContent=user.is_anonymous?'G':(user.email||'S').slice(0,2).toUpperCase();
  await refresh();const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
+ window.addEventListener('storage',e=>{if(e.key?.startsWith('sykerbos:watering-weight:'))render();});
+ window.addEventListener('pageshow',()=>{render();void refresh();});
 }
 $('#profile-button').addEventListener('click',async()=>{if(demo)return;if(confirm('Sign out of Sykerbos on this device?')){await supabase.auth.signOut();location.href='account.html';}});
 init().catch(error=>{console.error(error);$('#collection-summary').textContent='Unable to connect';$('#collection-error').textContent='Could not open your collection. Reload this page to try again.';$('#collection-error').hidden=false;});
