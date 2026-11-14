@@ -102,7 +102,7 @@ function render(){
   $('#plant-weight').textContent=view.latest?fmt(view.latest.w)+' g':'—';
   $('#plant-temperature').textContent=view.latest?fmt(view.latest.temperature_c)+' °C':'—';
   $('#plant-reading-count').textContent=count.toLocaleString();
-  const summaries={maintenance:'This tile is in maintenance. Historical readings remain available.',removed:'The pot appears removed. Reserve estimates are paused.',stale:'Waiting for a fresh tile reading.',reference:'Dry reference reached. Check your plant.',low:'Reserve is low against this pot’s current references. Check the plant before watering.',refill:'Recently watered. Watching the pot settle and begin its next dry-down.',drying:'Following this pot’s measured weight and dry-down.'};
+  const summaries={maintenance:'This tile is in maintenance. Historical readings remain available.',removed:'The pot appears removed. Reserve estimates are paused.',stale:'Waiting for a fresh tile reading.',reference:'Dry reference reached. Check your plant.',low:'Low against the saved range. Check the leaves.',refill:'Recently watered. Watching the pot settle and begin its next dry-down.',drying:'Following this watering cycle.'};
   $('#plant-summary').textContent=summaries[view.state];
   if(!maintenance&&view.latest?.source==='live-watering')$('#plant-summary').textContent='Latest watering weight · waiting for the next stored reading.';
 
@@ -117,18 +117,18 @@ function render(){
   $('#range-high-side').textContent=dial.full===null?'—':fmt(dial.full)+' g';
 
   $('#plant-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';
-  $('#plant-current-rate-note').textContent=view.rate!==null?'Measured since the latest watering / handling change':cycle.recent?'Rebuilding after watering':'Waiting for an uninterrupted dry-down';
+  $('#plant-current-rate-note').textContent=view.rate!==null?'Since watering or repositioning':cycle.recent?'Rebuilding after watering':'Waiting for an uninterrupted dry-down';
   const segment=cycle.segment;
   const movement=segment.length>1?segment.at(-1).w-segment[0].w:null;
   $('#plant-recent-movement').textContent=movement===null?'—':(movement>0?'+':'')+fmt(movement)+' g';
-  $('#plant-recent-movement-note').textContent='Since the latest refill / handling change';
+  $('#plant-recent-movement-note').textContent='This uninterrupted dry-down';
   $('#plant-projected-label').textContent=view.previousLow?'Previous cycle low':'Projected reserve';
   $('#plant-projected-days').textContent=view.previousLow?fmt(view.previousLow.weight)+' g':view.referenceReached?'Not estimated':view.days===null?'Learning':view.days<.1?'<0.1 days':'~'+fmt(view.days)+' days';
   const difference=view.abovePreviousLow;
   const comparison=difference===null?'Dry reference reached':Math.abs(difference)<.05?'At that low now':`${fmt(Math.abs(difference))} g ${difference>0?'above':'below'} that low now`;
   $('#plant-projected-note').textContent=view.previousLow||view.referenceReached?comparison:view.days===null?'Waiting for reliable daily use and references':`${fmt(view.reserve)} g reserve · ${fmt(view.usage.rate)} g/day${view.usage.qualifyingDays<7?' · early estimate':''}`;
   $('#plant-action-title').textContent={maintenance:'Tile in maintenance.',removed:'Return the pot.',stale:'Waiting for a reading.',reference:'Check your plant.',low:'Check your plant.',refill:'Recently watered.',drying:'Follow the dry-down.'}[view.state];
-  $('#plant-action-copy').textContent={maintenance:'Historical readings remain available while the tile is in maintenance.',removed:'Return the pot to resume water reserve and dry-down readings.',stale:'Reconnect the tile before relying on its current reserve estimate.',reference:view.rate>0?`Still losing ${fmt(view.rate)} g/day. Check the pot before watering.`:'Check the pot before watering.',low:'Reserve is low against the current references. Check the plant before watering, even if a recent refill was detected.',refill:'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.',drying:'Use the measured trend alongside your plant’s condition. Reserve days are estimates.'}[view.state];
+  $('#plant-action-copy').textContent={maintenance:'Historical readings remain available while the tile is in maintenance.',removed:'Return the pot to resume water reserve and dry-down readings.',stale:'Reconnect the tile before relying on its current reserve estimate.',reference:view.rate>0?`Still losing ${fmt(view.rate)} g/day. Check the pot before watering.`:'Check the pot before watering.',low:'Check the leaves and pot before watering.',refill:'Let excess water drain. The new dry-down rate appears once enough uninterrupted readings arrive.',drying:'Follow the curve between waterings.'}[view.state];
   if(dial.late){
     $('#plant-action-title').textContent=dial.newLow?'New observed low.':'Late dry-down.';
     $('#plant-action-copy').textContent=dial.newLow?'Check the leaves and note how the plant looks at this weight.':`${dial.slowed?'Weight loss has slowed to':'Still losing'} ${fmt(view.rate)} g/day. Check the leaves before deciding when to water.`;
@@ -150,11 +150,12 @@ function render(){
   $('#confidence-number').textContent=String(detected.length);
   $('#cycles-completed').textContent=String(completed);
   $('#cycles-ongoing').textContent=String(ongoing);
-  $('#evidence-cycles').textContent=`${completed} completed · ${ongoing} ongoing`;
+  $('#evidence-cycles').textContent=String(completed);
   $('#evidence-slope').textContent=view.rate===null?'Dry-down rebuilding':fmt(view.rate)+' g/day measured';
-  $('#evidence-reserve').textContent=view.known?`Full ${fmt(view.wet,0)} g · dry ${fmt(view.dry,0)} g`:'References still needed';
+  $('#evidence-reserve').textContent=view.observedLow?fmt(view.observedLow.weight)+' g':view.known?`Full ${fmt(view.wet,0)} g · dry ${fmt(view.dry,0)} g`:'References still needed';
   $('#evidence-next').textContent=ongoing?'Following the current cycle':'Waiting for the next watering';
   $('#intel-wet').textContent=fmt(view.wet,0)+' g';$('#intel-dry').textContent=fmt(view.dry,0)+' g';$('#intel-current').textContent=fmt(view.latest?.w)+' g';
+  $('#reserve-map-card').hidden=!view.known||view.referenceReached;
   const trigger=view.known&&!view.referenceReached&&view.usage.rate>0?Math.min(view.wet,view.dry+view.usage.rate*3):null;
   $('#intel-trigger').textContent=fmt(trigger,0)+' g';
   $('#reserve-trigger-marker').hidden=trigger===null;$('#reserve-trigger-label').hidden=trigger===null;

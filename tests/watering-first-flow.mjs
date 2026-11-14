@@ -39,11 +39,12 @@ el('#end-watering').handlers.click();
 assert.equal(run('finished'),true);assert.equal(run('running'),false);
 assert.equal(el('#done-watering').href,'plant.html?plant=pot-a');
 assert.equal(el('#done-watering').hidden,false);
-assert.match(el('#pour-message').textContent,/Watering finished/);
+assert.equal(el('#watering-target-controls').hidden,true);assert.equal(el('#watering-result').hidden,false);assert.equal(el('#watering-heading').textContent,'Watering finished.');
+assert.match(el('#pour-message').textContent,/Let excess water drain/);
 assert.equal(el('#added-weight').textContent,'—');
-run('receive(620.1)');assert.match(el('#pour-message').textContent,/Watering finished/);
+run('receive(620.1)');assert.match(el('#pour-message').textContent,/Let excess water drain/);
 now+=4000;intervals.forEach(f=>f());
-assert.match(el('#pour-message').textContent,/Watering finished/);
+assert.match(el('#pour-message').textContent,/Let excess water drain/);
 assert.equal(context.saveWrites.length,1);
 // A started session can also finish after losing its live feed.
 run("setContext({nickname:'Pot A',code:'Mini01',mass:540,low:525,high:640});receive(540);");

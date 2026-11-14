@@ -9,6 +9,6 @@ assert.ok(m.chart.hi>=640);assert.equal(m.chart.lo,525);
 const low=collectionModel(plant,[{weight_g:540,measured_at:new Date(now).toISOString(),run_id:'one'}],{now});assert.equal(low.priority,0);assert.equal(low.label,'Ready for a refill');
 const off=collectionModel(plant,rows,{now:now+2*3600000});assert.equal(off.percent,null);assert.equal(off.days,null);assert.equal(off.refill,null);assert.equal(off.label,'Offline');
 const removed=collectionModel(plant,[...rows,{weight_g:0,measured_at:new Date(now+1000).toISOString(),run_id:'one'}],{now:now+1000});assert.equal(removed.label,'Pot lifted');assert.equal(removed.refill,null);assert.equal(removed.percent,null);
-const unknown=collectionModel({},rows,{now});assert.equal(unknown.label,'Learning reserve');assert.equal(unknown.days,null);
+const unknown=collectionModel({},rows,{now});assert.equal(unknown.label,'Drying down');assert.equal(unknown.days,null);
 const maintenance=collectionModel(plant,rows,{now,device:{status:'maintenance'}});assert.equal(maintenance.percent,null);assert.equal(maintenance.priority,4);
 console.log('Passed: collection estimates, refill amount, reference scale, attention ordering, offline, removed, unknown and maintenance states.');

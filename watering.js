@@ -15,9 +15,13 @@ function updateSessionControls(){
   $('#end-watering').hidden=finished;
   $('#end-watering').disabled=false;
   $('#done-watering').hidden=!finished;
+  $('#watering-result').hidden=!finished;
+  $('#watering-heading').textContent=finished?'Watering finished.':'Water your plant.';
   if(finished){
     $('#wet-warning').hidden=true;
-    $('#pour-message').textContent='Watering finished. Let excess water drain. You can return to your plant.';
+    $('#result-weight').textContent=lastWeight===null?'—':fmt(Math.round(lastWeight),0)+' g';
+    $('#result-added').textContent=finishedGain===null?'Not tracked':fmt(finishedGain)+' g';
+    $('#pour-message').textContent='Let excess water drain, then return to your plant.';
     $('#added-weight').textContent=finishedGain===null?'—':fmt(finishedGain)+' g';
     $('#remaining-weight').textContent='—';
   }
@@ -62,9 +66,9 @@ function updatePlan(){
   updateZeroControls();
   const first=wet===null;
   $('#first-watering').hidden=!first;
-  $('#watering-target-controls').hidden=first;
-  $('#remaining-metric').hidden=first;
-  $('#water-progress').hidden=first;
+  $('#watering-target-controls').hidden=first||finished;
+  $('#remaining-metric').hidden=first||finished;
+  $('#water-progress').hidden=first||finished;
   if(first){updateFirstWatering();return;}
   const addition=numberOrNull(amount.value),loss=numberOrNull(rate.value),start=running?baseline:current;
   const plan=waterPlan({current:start,addition,dry,wet,rate:loss});
@@ -290,7 +294,7 @@ function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=fa
 }
 async function init(){
   if(demo){
-    $('#demo-notice').hidden=false;$('#demo-controls').hidden=false;$('#direct-connection').hidden=true;$('#back-plant').href='demo.html';
+    $('#demo-notice').hidden=false;$('#demo-controls').hidden=false;$('#direct-connection').hidden=true;$('#back-plant').href='app.html?demo=collection';
     setContext({nickname:'Kitchen Basil · watering example',code:'DemoTile',mass:615,low:610,high:params.get('first')==='1'?null:735,dailyLoss:18.6,experimental:true});
     tareSupported=true;receive(params.get('zero')==='1'?-5:615);return;
   }

@@ -30,7 +30,7 @@ function render(push=true){
   label.textContent=`Step ${index+1} of ${slides.length}`;
   bar.style.width=`${((index+1)/slides.length)*100}%`;
   back.style.visibility=index===0?'hidden':'visible';
-  next.textContent=index===0?'Get started →':index===slides.length-1?'Finish setup →':'Continue →';
+  next.textContent=index===0?'Get started →':index===slides.length-1?'Explore the demo →':'Continue →';
   localStorage.setItem('sykerbosOnboardingStep',String(index));
   if(push) window.scrollTo({top:0,behavior:'instant'});
   if(push) history.pushState({setupStep:index},'',`#step-${index+1}`);
@@ -44,10 +44,10 @@ function go(delta){
 next.addEventListener('click',()=>{
   if(index===slides.length-1){
     syncPlantName();
-    localStorage.setItem('sykerbosOnboardingComplete','true');
-    next.textContent='Opening Sykerbos…';
+    localStorage.setItem('sykerbosSetupPreviewComplete','true');
+    next.textContent='Opening the demo…';
     localStorage.setItem('sykerbosOnboardingStep','0');
-    window.location.href='app.html';
+    window.location.href='app.html?demo=collection';
     return;
   }
   go(1);

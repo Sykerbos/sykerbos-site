@@ -26,7 +26,7 @@ const sample=collectionDemo('below-reference').find(p=>p.id==='demo-b');
 const demoNow=Date.parse(sample.history.at(-1).measured_at);
 const comparison=collectionModel(sample,sample.history,{now:demoNow});
 const below=comparison.view;
-assert.equal(comparison.label,'Learning reserve');
+assert.equal(comparison.label,'Late dry-down');
 assert.equal(below.setupRetired,true);
 assert.equal(below.dry,null);
 assert.equal(below.referenceReached,false);

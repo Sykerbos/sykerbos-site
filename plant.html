@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261110-activity">
+  <link rel="stylesheet" href="plant.css?v=20261113-refine">
   <link rel="stylesheet" href="herbarium-physiology.css?v=1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
@@ -17,17 +17,16 @@
   <header class="app-header">
     <a class="brand brand-image-link" href="index.html" aria-label="Sykerbos"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
     <nav class="app-nav" aria-label="App">
-      <a href="app.html">Home</a>
-      <a class="active" href="plants.html">Plants</a>
+      <a href="app.html">My plants</a>
       <a href="herbarium.html">Herbarium</a>
-      <a href="app.html#settings">Settings</a>
+      <a href="app.html#settings">Devices</a>
     </nav>
     <button class="profile-button" type="button" aria-label="Profile">DD</button>
   </header>
 
   <main class="plant-shell">
     <p id="plant-demo-notice" class="panel-note" hidden>Demo · Simulated plant readings</p>
-    <a class="back-link" href="plants.html">← All plants</a>
+    <a class="back-link" href="app.html">← All plants</a>
 
     <section class="plant-hero">
       <div class="plant-hero-image" id="plant-hero-image" aria-hidden="true"></div>
@@ -42,7 +41,7 @@
         <div class="plant-now">
           <div><small>Current weight</small><strong id="plant-weight">—</strong></div>
           <div><small>Temperature</small><strong id="plant-temperature">—</strong></div>
-          <div><small>Readings</small><strong id="plant-reading-count">—</strong></div>
+
         </div>
       </div>
     </section>
@@ -76,12 +75,12 @@
           </div>
           <div class="plant-chart-dates" id="plant-chart-dates"></div>
           <div class="chart-summary intelligence-summary">
-            <div><small>Current use</small><strong id="plant-current-rate">—</strong><span id="plant-current-rate-note">Learning dry-down rate</span></div>
+            <div><small>Daily weight loss</small><strong id="plant-current-rate">—</strong><span id="plant-current-rate-note">Learning dry-down rate</span></div>
             <div><small>Recent movement</small><strong id="plant-recent-movement">—</strong><span id="plant-recent-movement-note">Last 12 hours</span></div>
             <div><small id="plant-projected-label">Projected reserve</small><strong id="plant-projected-days">—</strong><span id="plant-projected-note">Learning plant curve</span></div>
           </div>
           <p class="panel-note" id="plant-chart-note">Live VyTile readings.</p>
-          <details class="plant-chart-about"><summary>About this graph</summary><p id="plant-chart-method"></p></details>
+          <details class="plant-chart-about"><summary>About this graph</summary><p id="plant-chart-method"></p><p><span id="plant-reading-count">—</span> stored readings.</p></details>
         </article>
 
         <aside class="today-side">
@@ -140,13 +139,13 @@
             <details class="cycle-method"><summary>How is daily use calculated?</summary><p class="panel-note" id="use-method-note">Learning from measured days.</p></details>
           </article>
 
-          <article class="panel cycle-evidence-card">
+          <article class="panel cycle-evidence-card" hidden>
             <p class="eyebrow">Cycle history</p><h3 id="confidence-title">Watering cycles</h3>
             <div class="cycle-counts"><div><strong id="confidence-number">—</strong><span>Detected</span></div><div><strong id="cycles-completed">—</strong><span>Completed</span></div><div><strong id="cycles-ongoing">—</strong><span>Ongoing</span></div></div>
             <details><summary>How are cycles counted?</summary><p>A cycle runs from one detected watering to the next. The latest remains ongoing. Counts use this plant’s loaded measurement run; handling spikes and empty-tile readings are excluded.</p></details>
           </article>
 
-          <article class="panel reserve-map-card">
+          <article class="panel reserve-map-card" id="reserve-map-card">
             <p class="eyebrow">Reserve model</p>
             <h3>From saturation to dry threshold</h3>
             <div class="reserve-map">
@@ -170,9 +169,9 @@
             <h3>Recorded observations.</h3>
             <div class="evidence-list">
               <div><span>Observed signal</span><strong id="evidence-slope">Dry-down curve learning</strong></div>
-              <div><span>Reserve model</span><strong id="evidence-reserve">Thresholds learning</strong></div>
-              <div><span>Repeatability</span><strong id="evidence-cycles">Loading cycle history</strong></div>
-              <div><span>Next question</span><strong id="evidence-next">Repeat the cycle and compare</strong></div>
+              <div><span>Observed low</span><strong id="evidence-reserve">Thresholds learning</strong></div>
+              <div><span>Completed cycles</span><strong id="evidence-cycles">Loading cycle history</strong></div>
+              <div><span>Current cycle</span><strong id="evidence-next">Repeat the cycle and compare</strong></div>
             </div>
           </article>
         </div>
@@ -195,13 +194,12 @@
   </main>
 
   <nav class="mobile-nav" aria-label="Mobile app navigation">
-    <a href="app.html"><span>⌂</span>Home</a>
-    <a class="active" href="plants.html"><span>♧</span>Plants</a>
+    <a href="app.html"><span>♧</span>My plants</a>
     <a href="herbarium.html"><span>▦</span>Herbarium</a>
-    <a href="app.html#settings"><span>⚙</span>Settings</a>
+    <a href="app.html#settings"><span>⚙</span>Devices</a>
   </nav>
 
   <script type="module" src="herbarium-physiology.js?v=1"></script>
-  <script type="module" src="plant.js?v=20261113-handoff"></script>
+  <script type="module" src="plant.js?v=20261113-refine"></script>
 </body>
 </html>

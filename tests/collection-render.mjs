@@ -17,15 +17,15 @@ function run(search){
 const basic=run('?demo=collection');
 assert.equal((basic.html.match(/<article class="collection-plant /g)||[]).length,2);
 assert.ok(basic.html.indexOf('Pot B')<basic.html.indexOf('Pot A'));
-assert.match(basic.html,/Measurements & calculations/);assert.match(basic.html,/About \d days in reserve/);
+assert.match(basic.html,/Measurements/);assert.match(basic.html,/About \d days in reserve/);
 assert.doesNotMatch(basic.html,/NaN|undefined|Experimental|wilting/);
 vm.runInContext('collection[0].nickname="<img src=x onerror=alert(1)>";render();',basic.context);
 assert.doesNotMatch(basic.elements.get('#plant-list').innerHTML,/<img src=x/);
 assert.match(run('?demo=collection&state=offline').html,/Offline/);
 assert.match(run('?demo=collection&state=removed').html,/Pot lifted/);
-assert.match(run('?demo=collection&state=learning').html,/Learning reserve/);
+assert.match(run('?demo=collection&state=learning').html,/Drying down/);
 const below=run('?demo=collection&state=below-reference').html;
-assert.match(below,/Learning reserve/);
+assert.match(below,/Late dry-down/);
 assert.match(below,/g above previous low/);
 assert.doesNotMatch(below,/>0%<small>reserve/);
 console.log('Passed: both plants, reserve ordering, optional calculations, safe user text, and offline/removed/learning card rendering.');

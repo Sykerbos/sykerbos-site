@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#123d32">
   <title>Set up VyTile — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="onboarding.css?v=wet-reference-1">
+  <link rel="stylesheet" href="onboarding.css?v=20261113-refine">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -14,6 +14,7 @@
 </head>
 <body class="onboarding-body">
   <main class="onboarding-shell">
+  <p class="setup-preview-note">Setup preview · device discovery and Wi-Fi below are examples. <a href="plant-setup.html">Manage connected VyTiles →</a></p>
     <header class="onboarding-header">
       <a class="brand brand-image-link" href="index.html"><img class="brand-logo" src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a>
       <span id="step-label">Step 1 of 13</span>
@@ -23,8 +24,8 @@
     <section class="setup-card">
       <div class="slides" id="slides">
         <article class="setup-slide active" data-step="0">
-          <p class="eyebrow">Welcome to Sykerbos</p><h1>Let’s set up your VyTile.</h1>
-          <p class="lede">We’ll connect it to Sykerbos and start learning how your plant uses water.</p>
+          <p class="eyebrow">Welcome to Sykerbos</p><h1>Preview your first VyTile setup.</h1>
+          <p class="lede">See the steps, from connecting a tile to its first dry-down.</p>
           <figure class="setup-photo welcome-photo"><img src="assets/hero/vytile-home-hero.png" alt="Basil pot on a stone VyTile scale in a kitchen" width="1672" height="941"></figure>
         </article>
 
@@ -35,21 +36,21 @@
         </article>
 
         <article class="setup-slide" data-step="2">
-          <p class="eyebrow">Nearby device</p><h1>We found your VyTile.</h1>
-          <p class="lede">Keep your phone close while Sykerbos makes a secure local connection.</p>
-          <button class="device-card selected" type="button"><span>VyTile Mini</span><small>Device ending 7C9A · closest</small></button>
+          <p class="eyebrow">Nearby device</p><h1>Choose a VyTile.</h1>
+          <p class="lede">Example device. This preview does not scan for hardware.</p>
+          <button class="device-card selected" type="button"><span>VyTile Mini</span><small>Example · Mini</small></button>
         </article>
 
         <article class="setup-slide" data-step="3">
           <p class="eyebrow">Your account</p><h1>Save your plant journey.</h1>
           <p class="lede">Create a Sykerbos account so your VyTile, plant history and learning stay with you.</p>
-          <div class="auth-options"><button type="button">Continue with Google</button><button type="button">Continue with Apple</button><button type="button">Continue with email</button></div>
+          <div class="auth-options"><a class="button" href="account.html">Open your account →</a></div><p class="helper-text">This preview does not create an account.</p>
           <a class="text-link" href="#">Already have an account? Sign in</a>
         </article>
 
         <article class="setup-slide" data-step="4">
           <p class="eyebrow">Wi-Fi</p><h1>Connect your VyTile to Wi-Fi.</h1>
-          <p class="lede">Choose the network you want this VyTile to use.</p>
+          <p class="lede">Example networks. Wi-Fi provisioning is not connected in this preview.</p>
           <div class="network-list">
             <button type="button"><span>Home Wi-Fi</span><small>Strong signal</small></button>
             <button type="button"><span>Guest network</span><small>Good signal</small></button>
@@ -101,7 +102,7 @@
 
         <article class="setup-slide" data-step="11">
           <p class="eyebrow">Wet reference</p><h1>Wait for a steady reading.</h1>
-          <p class="lede">The settled weight of the well-watered, freely drained pot gives Sykerbos a reference for the first dry-down.</p>
+          <p class="lede">The steady, drained weight becomes the starting full weight.</p>
           <div class="reading-card">
             <span class="reading-status"><i></i> Example · stable</span>
             <strong>1,284 g</strong>
@@ -119,7 +120,7 @@
             <div><span class="learning-icon">◌</span><strong>Watching irrigation</strong><small>Ready</small></div>
             <div><span class="learning-icon">°</span><strong>Tracking temperature</strong><small>Alongside weight</small></div>
           </div>
-          <p class="helper-text">No watering schedule yet — Sykerbos will learn from the plant first.</p>
+          <p class="helper-text">Preview complete. Explore a sample collection next.</p>
         </article>
       </div>
 
@@ -130,6 +131,6 @@
       </nav>
     </section>
   </main>
-  <script src="onboarding.js?v=wet-reference-2"></script>
+  <script src="onboarding.js?v=preview-3"></script>
 </body>
 </html>

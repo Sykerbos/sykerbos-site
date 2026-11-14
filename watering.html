@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123d32">
 <title>Water VyTile — Sykerbos</title>
-<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="watering.css?v=7">
+<link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="watering.css?v=8">
 <link rel="icon" href="favicon.ico" sizes="any">
 </head>
 <body class="watering-body">
 <header class="watering-header"><a href="index.html" aria-label="Sykerbos home"><img src="assets/brand/sykerbos-logo-transparent-exact.png" alt="Sykerbos"></a><a id="back-plant" class="text-link" href="app.html">← Back to plant</a></header>
 <main class="watering-shell">
 <div id="demo-notice" class="watering-notice" hidden>Demo · Simulated readings</div>
-<section class="watering-title"><h1>Water your plant.</h1><p id="plant-name">Loading your plant…</p></section>
+<section class="watering-title"><h1 id="watering-heading">Water your plant.</h1><p id="plant-name">Loading your plant…</p></section>
 <p id="page-error" class="watering-notice" role="alert" hidden></p>
 <div class="watering-grid">
 <section class="water-panel plan-panel" aria-label="Watering amount">
+<div id="watering-result" hidden><p class="eyebrow">Session complete</p><h2>All done.</h2><dl class="watering-result-values"><div><dt>Last live weight</dt><dd id="result-weight">—</dd></div><div><dt>Added this session</dt><dd id="result-added">—</dd></div></dl><p class="field-help">Your tile will keep recording the next dry-down.</p></div>
 <div id="first-watering" hidden><h2>First watering</h2><p>We’re learning this pot’s capacity.</p><p>Water slowly. Let excess water drain, then return the pot and save its steady weight.</p><div id="save-full-controls"><label><input id="drained-confirm" type="checkbox"> Pot is fully watered and drained</label><button id="save-full-weight" class="button button-secondary" type="button" disabled>Save full weight</button><p id="save-full-help" class="field-help" role="status">Keep the pot still to save its weight.</p></div></div>
 <div id="watering-target-controls"><label class="water-field" for="target-amount">Water to add</label>
 <div class="amount-input"><input id="target-amount" type="number" min="0.1" max="50000" step="0.1" inputmode="decimal" placeholder="120"><span>ml</span></div>
@@ -37,5 +38,5 @@
 </div>
 <div id="demo-controls" class="demo-controls" hidden><p>Try the example</p><button type="button" data-add="10">+10 g</button><button type="button" data-add="25">+25 g</button><button type="button" data-add="50">+50 g</button></div>
 </main>
-<script type="module" src="watering.js?v=14"></script>
+<script type="module" src="watering.js?v=15"></script>
 </body></html>

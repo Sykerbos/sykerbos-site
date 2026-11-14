@@ -21,3 +21,6 @@
 .learning-card>div{display:grid;gap:5px;padding:22px;border-radius:20px;background:var(--sage);border:1px solid rgba(18,61,50,.05)}
 .learning-card small{color:var(--muted)}.learning-icon{font-size:1.65rem;color:var(--ink)}
 @media(max-width:640px){.soft-note{align-items:flex-start;flex-direction:column}.soft-note span{text-align:left}.placement-ring{width:190px}.learning-card{grid-template-columns:1fr}.reading-card{padding:24px}}
+
+.setup-preview-note{padding:12px 16px;border:1px solid #dbcfdf;border-radius:12px;background:#f4edf6;color:#66436c;font-size:.8rem;line-height:1.6}
+.setup-preview-note a{color:inherit;text-underline-offset:3px}
