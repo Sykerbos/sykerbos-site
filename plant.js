@@ -212,6 +212,7 @@ async function init(){
     if(sample){plant={...sample,cycles_observed:0};device=sample.device;rows=sample.history;}
     count=rows.length;
     document.querySelectorAll('a[href="app.html"],a[href="plants.html"]').forEach(a=>a.href='app.html?demo=collection');
+    document.querySelectorAll('a[href="app.html#settings"]').forEach(a=>a.href='app.html?demo=collection#settings');
     document.querySelectorAll('a[href="herbarium.html"]').forEach(a=>a.href='herbarium.html?demo=1');
   }else{
     const {data:{session}}=await supabase.auth.getSession();if(!session){location.replace('account.html');return;}
