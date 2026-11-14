@@ -28,7 +28,7 @@
 <div class="session-metrics"><div><small>Added</small><strong id="added-weight">—</strong></div><div id="remaining-metric"><small>Remaining</small><strong id="remaining-weight">—</strong></div></div>
 <progress id="water-progress" max="100" value="0" aria-label="Progress toward watering target"></progress>
 <p id="pour-message" class="pour-message" role="status">Finding your tile…</p>
-<div class="session-buttons"><button id="start-watering" class="button" type="button" disabled>Start watering</button><button id="end-watering" class="button button-secondary" type="button" disabled hidden>End session</button><button id="reconnect" class="plain-button" type="button" hidden>Connect tile</button><button id="open-zero" class="plain-button" type="button" hidden>Zero empty tile</button></div>
+<div class="session-buttons"><button id="start-watering" class="button" type="button" disabled>Start watering</button><button id="end-watering" class="button button-secondary" type="button">Finish watering</button><a id="done-watering" class="button" href="app.html" hidden>Back to plant →</a><button id="reconnect" class="plain-button" type="button" hidden>Connect tile</button><button id="open-zero" class="plain-button" type="button" hidden>Zero empty tile</button></div>
 </section>
 </div>
 <div class="watering-settings">
@@ -37,5 +37,5 @@
 </div>
 <div id="demo-controls" class="demo-controls" hidden><p>Try the example</p><button type="button" data-add="10">+10 g</button><button type="button" data-add="25">+25 g</button><button type="button" data-add="50">+50 g</button></div>
 </main>
-<script type="module" src="watering.js?v=12"></script>
+<script type="module" src="watering.js?v=13"></script>
 </body></html>

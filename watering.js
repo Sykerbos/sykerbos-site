@@ -3,11 +3,23 @@ const $=s=>document.querySelector(s),params=new URLSearchParams(location.search)
 let current=null,dry=null,wet=null,deviceCode='',running=false,baseline=null,lastWeight=null,lastSampleAt=0,lastSequence=-1,endpoint=null,pollTimer=null,controller=null,connected=false,storageKey=null,connectionGeneration=0,addressKey=null;
 let connectionStore=null,remoteSavedUrl=null,savingConnection=false,saveRetryAt=0;
 let stableSamples=[],savingFullWeight=false;
+let finished=false,finishedGain=null;
 let zeroing=false,tareSupported=false,tareRequestId=null,tareDeadline=0,zeroResult='';
 const amount=$('#target-amount'),rate=$('#daily-rate');
 const fmt=(v,d=1)=>v===null||!Number.isFinite(v)?'—':v.toFixed(d);
 function message(text,bad=false){$('#connection-state').textContent=text;$('#connection-state').className='connection-state'+(bad?' stale':connected?' connected':'');}
 function fresh(){return connected&&(demo||Date.now()-lastSampleAt<3000);}
+function updateSessionControls(){
+  $('#start-watering').hidden=running||finished;
+  $('#end-watering').hidden=finished;
+  $('#end-watering').disabled=false;
+  $('#done-watering').hidden=!finished;
+  if(finished){
+    $('#pour-message').textContent='Watering finished. Let excess water drain. You can return to your plant.';
+    $('#added-weight').textContent=finishedGain===null?'—':fmt(finishedGain)+' g';
+    $('#remaining-weight').textContent='—';
+  }
+}
 function stableFullWeight(){
   if(!fresh()||stableSamples.length<8)return null;
   const points=stableSamples.slice(-8),weights=points.map(p=>p.weight);
@@ -20,8 +32,7 @@ function updateFirstWatering(){
   const gained=baseline!==null&&lastWeight!==null?Math.max(0,lastWeight-baseline):null;
   $('#added-weight').textContent=running&&gained!==null?fmt(gained)+' g':'—';
   $('#start-watering').disabled=running||zeroing||!fresh();
-  $('#end-watering').disabled=!running;
-  $('#start-watering').hidden=running;$('#end-watering').hidden=!running;
+  updateSessionControls();
   $('#reconnect').hidden=demo||fresh();$('#reconnect').disabled=running;
   $('#save-full-controls').hidden=running;
   const weight=stableFullWeight(),confirmed=$('#drained-confirm').checked;
@@ -31,6 +42,7 @@ function updateFirstWatering(){
   $('#wet-warning').hidden=true;
   document.querySelectorAll('[data-add]').forEach(b=>b.disabled=!running);
   if(fresh())$('#pour-message').textContent=running?'First watering: stop if runoff appears. Let the pot drain.':'First watering: start to track the weight, or save an already drained pot.';
+  updateSessionControls();
 }
 function updateZeroControls(){
   const empty=fresh()&&lastWeight!==null&&Math.abs(lastWeight)<=50;
@@ -64,8 +76,7 @@ function updatePlan(){
   const valid=addition!==null&&addition>0&&addition<=50000&&plan.permitted;
   amount.setAttribute('aria-invalid',String(!valid&&amount.value!==''));
   $('#start-watering').disabled=running||zeroing||!fresh()||!valid;
-  $('#end-watering').disabled=!running;
-  $('#start-watering').hidden=running;$('#end-watering').hidden=!running;
+  updateSessionControls();
   $('#reconnect').hidden=demo||fresh();$('#reconnect').disabled=running;
   $('#reconnect').textContent=endpoint?'Reconnect':'Connect tile';
   document.querySelectorAll('[data-add]').forEach(b=>b.disabled=!running);
@@ -89,7 +100,7 @@ function receive(weight,sampleAge=0){
   $('#live-weight').textContent=fmt(Math.round(weight),0);
   message(demo?'Example':'Live · '+deviceCode);
   $('#sample-age').hidden=true;
-  if(!running)$('#pour-message').textContent='Keep the pot still. Start before pouring.';
+  if(!running&&!finished)$('#pour-message').textContent='Keep the pot still. Start before pouring, or finish if you’ve already watered.';
   if(!demo){
     $('#connection-help').textContent='Connected to '+deviceCode+'.';
     if(addressKey&&endpoint){try{localStorage.setItem(addressKey,endpoint);}catch{}}
@@ -193,12 +204,14 @@ $('#zero-tile').addEventListener('click',async()=>{
 
 $('#start-watering').addEventListener('click',()=>{
   const plan=waterPlan({current:lastWeight,addition:amount.value,dry,wet});
-  if(zeroing||!fresh()||(wet!==null&&(!plan.permitted||Number(amount.value)>50000))){updatePlan();return;}
+  if(finished||zeroing||!fresh()||(wet!==null&&(!plan.permitted||Number(amount.value)>50000))){updatePlan();return;}
   baseline=lastWeight;current=lastWeight;running=true;amount.disabled=true;rate.disabled=true;$('#use-suggestion').disabled=true;
   $('#added-weight').textContent='0.0 g';$('#remaining-weight').textContent=fmt(Number(amount.value))+' g';updatePlan();
 });
 $('#end-watering').addEventListener('click',()=>{
-  if(!running)return;
+  if(finished)return;
+  finishedGain=running&&baseline!==null&&lastWeight!==null?Math.max(0,lastWeight-baseline):null;
+  finished=true;
   running=false;amount.disabled=false;rate.disabled=false;
   $('#pour-message').textContent='Session ended. Let it drain.';
   if(wet===null){stableSamples=[];$('#drained-confirm').checked=false;}
@@ -206,6 +219,7 @@ $('#end-watering').addEventListener('click',()=>{
   if(lastWeight!==null)current=lastWeight;
   $('#added-weight').textContent='—';$('#remaining-weight').textContent='—';$('#water-progress').value=0;
   document.querySelector('.live-panel').classList.toggle('target-reached',false);
+  $('#done-watering').href=$('#back-plant').href;
   updatePlan();
 });
 $('#drained-confirm').addEventListener('change',updatePlan);
@@ -237,7 +251,7 @@ setInterval(()=>{
     message('Reconnecting…',true);$('#sample-age').hidden=false;$('#sample-age').textContent='Last reading · reconnecting…';
     $('#save-full-weight').disabled=true;$('#zero-tile').disabled=true;stableSamples=[];
     $('#start-watering').disabled=true;$('#reconnect').hidden=false;$('#reconnect').disabled=running;
-    $('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for your tile. Stay on the same Wi-Fi.';
+    if(!finished)$('#pour-message').textContent=running?'Stop pouring: fresh readings are not arriving.':'Waiting for your tile. Stay on the same Wi-Fi.';
   }
 },500);
 window.addEventListener('pagehide',()=>{clearTimeout(pollTimer);controller?.abort();});
@@ -245,6 +259,7 @@ function updateReferenceNote(provisional){
   $('#reference-note').textContent=wet===null?'Save the drained full weight to set a watering limit.':`Full weight ${fmt(wet,0)} g${dry===null?'':` · ${provisional?'Setup dry weight':'Dry weight'} ${fmt(dry,0)} g`}.`;
 }
 function setContext({nickname,code,mass,low,high,dailyLoss,stamp,experimental=false,key=null,savedConnection=null,usage=null}){
+  finished=false;finishedGain=null;
   stableSamples=[];
   current=numberOrNull(mass);dry=numberOrNull(low);wet=numberOrNull(high);deviceCode=code;storageKey=key;addressKey=key?key+':liveAddress:'+code:null;
   if(addressKey){try{const saved=localStorage.getItem(addressKey)||localStorage.getItem(key+':liveAddress');if(saved)$('#device-url').value=localReadingUrl(saved).href;}catch{}}

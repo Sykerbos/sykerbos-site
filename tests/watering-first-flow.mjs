@@ -28,4 +28,29 @@ run("setContext({nickname:'Unknown',code:'Mini01',mass:534,low:525,high:null});"
 for(let i=0;i<8;i++){now+=500;run('receive(640)');}
 now+=4000;assert.equal(run('stableFullWeight()'),null);await el('#save-full-weight').handlers.click();assert.equal(context.saveWrites.length,1);
 for(let i=0;i<8;i++){now+=500;run('receive('+(600+i*10)+')');}assert.equal(run('stableFullWeight()'),null);
+// Already poured without Start: an oversized old target must not trap the user.
+run("setContext({nickname:'Pot A',code:'Mini01',mass:620.3,low:525,high:640});receive(620.3);");
+el('#back-plant').href='plant.html?plant=pot-a';
+el('#target-amount').value='113.4';run('updatePlan()');
+assert.equal(el('#start-watering').disabled,true);
+assert.equal(el('#end-watering').hidden,false);
+assert.equal(el('#end-watering').disabled,false);
+el('#end-watering').handlers.click();
+assert.equal(run('finished'),true);assert.equal(run('running'),false);
+assert.equal(el('#done-watering').href,'plant.html?plant=pot-a');
+assert.equal(el('#done-watering').hidden,false);
+assert.match(el('#pour-message').textContent,/Watering finished/);
+assert.equal(el('#added-weight').textContent,'—');
+run('receive(620.1)');assert.match(el('#pour-message').textContent,/Watering finished/);
+now+=4000;intervals.forEach(f=>f());
+assert.match(el('#pour-message').textContent,/Watering finished/);
+assert.equal(context.saveWrites.length,1);
+// A started session can also finish after losing its live feed.
+run("setContext({nickname:'Pot A',code:'Mini01',mass:540,low:525,high:640});receive(540);");
+el('#target-amount').value='50';el('#start-watering').handlers.click();
+run('receive(560);disconnect()');
+assert.equal(el('#end-watering').disabled,false);
+el('#end-watering').handlers.click();
+assert.equal(run('running'),false);assert.equal(el('#added-weight').textContent,'20.0 g');
+assert.equal(el('#start-watering').hidden,true);assert.equal(el('#done-watering').hidden,false);
 console.log('Passed: first watering starts without a goal, gain tracking, drained confirmation, stable fresh save, owner/device scoping, transition to capacity limit, stale/moving save rejection.');
