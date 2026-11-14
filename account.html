@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#123d32">
   <title>Account — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="account.css">
+  <link rel="stylesheet" href="account.css?v=20261114-guest">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -22,6 +22,8 @@
         <p>Sign in to your plants, or try the demo.</p>
       </div>
 
+      <div class="guest-entry"><a id="guest-button" class="button guest-button" href="app.html?demo=collection">Try as guest →</a><p class="guest-note">No email, password or account needed.</p></div>
+      <div class="account-divider"><span>Have a VyTile? Sign in below</span></div>
       <div class="account-tabs" role="tablist">
         <button class="active" data-mode="signin" type="button">Sign in</button>
         <button data-mode="signup" type="button">Create account</button>
@@ -33,12 +35,9 @@
         <button id="submit-account" class="button" type="submit">Sign in</button>
       </form>
 
-      <div class="account-divider"><span>or</span></div>
-      <a id="guest-button" class="button button-secondary guest-button" href="app.html?demo=collection">Explore as guest</a>
-      <p class="guest-note">Sample plants. No account needed.</p>
       <p id="account-message" class="account-message" aria-live="polite"></p>
     </section>
   </main>
-  <script type="module" src="account.js?v=20261016-guest"></script>
+  <script type="module" src="account.js?v=20261114-guest"></script>
 </body>
 </html>

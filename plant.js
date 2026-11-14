@@ -1,5 +1,4 @@
 import {collectionDemo} from './collection-demo.js?v=2';
-import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=6';
 import {plantDrydownGauge} from './plant-drydown-gauge.js?v=1';
@@ -13,7 +12,7 @@ const fmt=(n,d=1)=>n!==null&&n!==undefined&&Number.isFinite(Number(n))?Number(n)
 const stamp=r=>r?.measured_at||r?.created_at;
 const time=r=>Date.parse(stamp(r));
 const name=p=>p.nickname||p.common_name||'Your plant';
-let plant=null,device=null,rows=[],count=0,chartRange='cycle',latestKey='',loading=false;
+let plant=null,device=null,rows=[],count=0,chartRange='cycle',latestKey='',loading=false,supabase=null;
 const demo=new URLSearchParams(location.search).get('demo')==='watering';
 function age(t){
   if(!Number.isFinite(t))return 'No reading';
@@ -215,6 +214,7 @@ async function init(){
     document.querySelectorAll('a[href="app.html#settings"]').forEach(a=>a.href='app.html?demo=collection#settings');
     document.querySelectorAll('a[href="herbarium.html"]').forEach(a=>a.href='herbarium.html?demo=1');
   }else{
+    ({supabase}=await import('./supabase-client.js'));
     const {data:{session}}=await supabase.auth.getSession();if(!session){location.replace('account.html');return;}
     const id=new URLSearchParams(location.search).get('plant');let q=supabase.from('plants').select('*').eq('user_id',session.user.id);q=id?q.eq('id',id):q.eq('is_primary',true);
     const {data,error}=await q.limit(1);if(error||!data?.length)throw error||Error('Plant not found');plant=data[0];

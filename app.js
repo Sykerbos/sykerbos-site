@@ -1,6 +1,5 @@
 import {reservePercentLabel} from './watering-model.js?v=5';
 import {wateringDisplayRows} from './watering-handoff.js?v=1';
-import {supabase} from './supabase-client.js';
 import {plantAssetFor} from './plant-assets.js';
 import {collectionModel} from './collection-model.js?v=4';
 import {collectionDemo} from './collection-demo.js?v=2';
@@ -11,7 +10,7 @@ const time=r=>Date.parse(stamp(r));
 const number=(v,d=1)=>v!==null&&v!==undefined&&Number.isFinite(Number(v))?Number(v).toFixed(d):'—';
 const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const title=p=>p.nickname||p.common_name||'Your plant';
-let collection=[],user=null,refreshing=false;
+let collection=[],user=null,refreshing=false,supabase=null;
 const historyCache=new Map();
 function age(t){if(!Number.isFinite(t))return 'No readings yet';const m=Math.max(0,Math.round((Date.now()-t)/60000));return m<2?'Updated just now':m<60?`Updated ${m} min ago`:m<2880?`Last seen ${Math.round(m/60)} h ago`:`Last seen ${Math.round(m/1440)} days ago`;}
 function sparkline(model){
@@ -76,6 +75,7 @@ function demoPlants(){return collectionDemo(new URLSearchParams(location.search)
 async function refresh(){if(refreshing||document.hidden)return;refreshing=true;try{await loadPlantData();$('#collection-error').hidden=true;}catch(error){console.error(error);$('#collection-error').textContent=collection.length?'Could not refresh. Showing the last loaded readings.':'Could not load your plants. Reload this page to try again.';$('#collection-error').hidden=false;$('#collection-summary').textContent='Connection interrupted';}finally{refreshing=false;}}
 async function init(){
  if(demo){$('#dashboard-demo-notice').hidden=false;$('#profile-button').textContent='D';$('#profile-button').setAttribute('aria-label','Demo account');collection=demoPlants();render();return;}
+ ({supabase}=await import('./supabase-client.js'));
  const {data:{session},error}=await supabase.auth.getSession();if(error)throw error;if(!session){location.replace('account.html');return;}user=session.user;$('#add-plant').href='plant-setup.html';
  $('#profile-button').textContent=user.is_anonymous?'G':(user.email||'S').slice(0,2).toUpperCase();
  await refresh();const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)void refresh();});window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
