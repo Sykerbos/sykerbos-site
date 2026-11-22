@@ -1,7 +1,7 @@
 import {reservePercentLabel} from './watering-model.js?v=5';
 import {wateringDisplayRows} from './watering-handoff.js?v=1';
 import {plantAssetFor} from './plant-assets.js';
-import {collectionModel} from './collection-model.js?v=4';
+import {collectionModel} from './collection-model.js?v=5';
 import {collectionDemo} from './collection-demo.js?v=2';
 const $=s=>document.querySelector(s);
 const demo=['collection','watering'].includes(new URLSearchParams(location.search).get('demo'));

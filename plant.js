@@ -1,7 +1,7 @@
 import {collectionDemo} from './collection-demo.js?v=2';
 import {plantAssetFor} from './plant-assets.js';
 import {plantState} from './plant-state.js?v=6';
-import {plantDrydownGauge} from './plant-drydown-gauge.js?v=1';
+import {plantDrydownGauge} from './plant-drydown-gauge.js?v=2';
 import {plantActivity} from './plant-activity.js?v=1';
 import {wateringDisplayRows} from './watering-handoff.js?v=1';
 import {plantTrendModel} from './plant-trend-model.js?v=3';
@@ -108,11 +108,14 @@ function render(){
   const gauge=$('#radial-gauge'),dial=plantDrydownGauge(view,plant.learned_saturated_g);
   gauge.dataset.known=String(dial.angle!==null);
   gauge.style.setProperty('--angle',(dial.angle??225)+'deg');
-  gauge.setAttribute('role','img');gauge.setAttribute('aria-label',dial.label+' · '+dial.caption);
+  gauge.setAttribute('role','img');gauge.setAttribute('aria-label',`${dial.title} · ${dial.label} · ${dial.caption} · ${dial.lowLabel}: ${dial.low===null?'not established':fmt(dial.low)+' g'} · ${dial.fullLabel}: ${dial.full===null?'not established':fmt(dial.full)+' g'}`);
+  $('#range-title').textContent=dial.title;
   $('#range-percent').textContent=dial.label;
   $('#range-caption').textContent=dial.caption;
-  $('#range-percent').classList.toggle('learning-reserve',!dial.label.endsWith('%'));
-  $('#range-low-side').textContent=dial.low===null?'—':fmt(dial.low)+' g';
+  $('#range-percent').classList.toggle('learning-reserve',!/^<?\d+(?:%| g)$/.test(dial.label));
+  $('#range-low-label').textContent=dial.lowLabel;
+  $('#range-high-label').textContent=dial.fullLabel;
+  $('#range-low-side').textContent=dial.low===null?'Low not established':fmt(dial.low)+' g';
   $('#range-high-side').textContent=dial.full===null?'—':fmt(dial.full)+' g';
 
   $('#plant-current-rate').textContent=view.rate===null?'Learning':fmt(view.rate)+' g/day';

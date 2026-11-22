@@ -7,7 +7,7 @@
   <title>Plant — Sykerbos</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <link rel="stylesheet" href="plant.css?v=20261113-refine">
+  <link rel="stylesheet" href="plant.css?v=20261122-radial">
   <link rel="stylesheet" href="herbarium-physiology.css?v=1">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="icon" href="favicon.ico" sizes="any">
@@ -85,14 +85,14 @@
 
         <aside class="today-side">
           <article class="panel moisture-position">
-            <p class="eyebrow">Water reserve</p>
+            <p class="eyebrow" id="range-title">Dry-down</p>
             <div class="radial-wrap">
               <div class="radial-gauge" id="radial-gauge" data-known="false" style="--angle:225deg">
-                <div><strong id="range-percent" class="learning-reserve">Tracking</strong><small id="range-caption">water reserve</small></div>
+                <div><strong id="range-percent" class="learning-reserve">Waiting</strong><small id="range-caption">for a reading</small></div>
                 <span class="gauge-indicator" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="range-scale"><span><small>Observed low</small><strong id="range-low-side">—</strong></span><span><small>Saturated weight</small><strong id="range-high-side">—</strong></span></div>
+            <div class="range-scale"><span><small id="range-low-label">Observed low</small><strong id="range-low-side">Low not established</strong></span><span><small id="range-high-label">Saturated weight</small><strong id="range-high-side">—</strong></span></div>
           </article>
 
           <article class="panel next-action">
@@ -200,6 +200,6 @@
   </nav>
 
   <script type="module" src="herbarium-physiology.js?v=1"></script>
-  <script type="module" src="plant.js?v=20261114-guest"></script>
+  <script type="module" src="plant.js?v=20261122-radial"></script>
 </body>
 </html>

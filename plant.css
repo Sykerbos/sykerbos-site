@@ -42,6 +42,7 @@
 .preferred-band-row{display:flex;align-items:center;justify-content:center;gap:8px;margin:-4px 0 16px;color:var(--muted);font-size:.78rem}
 .preferred-swatch{width:22px;height:5px;border-radius:999px;background:linear-gradient(90deg,#79a85a,#2f7f5f)}
 .radial-gauge strong.learning-reserve{font-size:clamp(1.08rem,2.3vw,1.34rem);letter-spacing:-.02em}
+.radial-gauge[data-known="false"]{background:conic-gradient(from 225deg,#dce5df 0deg 270deg,transparent 270deg 360deg)}
 
 /* Intelligence dashboard visuals — 2026-10-14 */
 .intelligence-dashboard{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
